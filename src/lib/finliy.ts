@@ -7,6 +7,7 @@ export type Transaction = {
   category: string;
   type: "Receita" | "Despesa";
   amount: number;
+  product?: string;
 };
 
 export type RoutineItem = {
@@ -21,9 +22,12 @@ export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   text: string;
-  block?: "finance" | "routine" | "blocked" | "file";
+  block?: "finance" | "routine" | "blocked" | "file" | "dre" | "metrics" | "chart";
+  chart?: ChartKind;
   file?: { name: string; size: number };
 };
+
+export type ChartKind = "faturamento" | "compras" | "comparativo" | "despesas-pizza" | "saldo-linha" | "margem-produto";
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -42,16 +46,18 @@ export const todayISO = () => {
 };
 
 export const seedTransactions: Transaction[] = [
-  { id: uid(), date: "2026-07-01", description: "Saldo inicial", category: "-", type: "Receita", amount: 10000 },
-  { id: uid(), date: "2026-07-02", description: "Venda de produtos", category: "Receita", type: "Receita", amount: 3500 },
-  { id: uid(), date: "2026-07-03", description: "Pagamento de fornecedores", category: "Despesa", type: "Despesa", amount: 2000 },
-  { id: uid(), date: "2026-07-04", description: "Conta de energia", category: "Despesa", type: "Despesa", amount: 450 },
-  { id: uid(), date: "2026-07-05", description: "Recebimento de cliente", category: "Receita", type: "Receita", amount: 1800 },
-  { id: uid(), date: "2026-07-06", description: "Folha de pagamento", category: "Despesa", type: "Despesa", amount: 4200 },
-  { id: uid(), date: "2026-07-07", description: "Compra de materiais", category: "Despesa", type: "Despesa", amount: 900 },
-  { id: uid(), date: "2026-07-08", description: "Venda de serviços", category: "Receita", type: "Receita", amount: 2600 },
-  { id: uid(), date: "2026-07-09", description: "Internet e telefone", category: "Despesa", type: "Despesa", amount: 180 },
-  { id: uid(), date: "2026-07-10", description: "Manutenção de equipamentos", category: "Despesa", type: "Despesa", amount: 520 },
+  { id: uid(), date: "2026-07-01", description: "Saldo inicial", category: "Saldo inicial", type: "Receita", amount: 10000 },
+  { id: uid(), date: "2026-07-02", description: "Venda de produtos pet", category: "Vendas", type: "Receita", amount: 3500, product: "Pet" },
+  { id: uid(), date: "2026-07-03", description: "Pagamento de fornecedores (ração pet)", category: "Fornecedores", type: "Despesa", amount: 2000, product: "Pet" },
+  { id: uid(), date: "2026-07-04", description: "Conta de energia", category: "Contas e Utilidades", type: "Despesa", amount: 450 },
+  { id: uid(), date: "2026-07-05", description: "Recebimento de cliente", category: "Recebimentos", type: "Receita", amount: 1800, product: "Serviços" },
+  { id: uid(), date: "2026-07-06", description: "Folha de pagamento", category: "Folha de Pagamento", type: "Despesa", amount: 4200 },
+  { id: uid(), date: "2026-07-07", description: "Compra de materiais (acessórios)", category: "Compras", type: "Despesa", amount: 900, product: "Acessórios" },
+  { id: uid(), date: "2026-07-08", description: "Venda de serviços", category: "Serviços", type: "Receita", amount: 2600, product: "Serviços" },
+  { id: uid(), date: "2026-07-09", description: "Internet e telefone", category: "Contas e Utilidades", type: "Despesa", amount: 180 },
+  { id: uid(), date: "2026-07-10", description: "Manutenção de equipamentos", category: "Manutenção", type: "Despesa", amount: 520 },
+  { id: uid(), date: "2026-07-11", description: "Venda de acessórios", category: "Vendas", type: "Receita", amount: 1400, product: "Acessórios" },
+  { id: uid(), date: "2026-07-12", description: "Anúncios no Instagram", category: "Marketing", type: "Despesa", amount: 300 },
 ];
 
 const r = (time: string, activity: string, duration: string): RoutineItem => ({
@@ -130,11 +136,32 @@ const CATEGORIES: [string[], string][] = [
   [["comprei", "compra", "material", "estoque", "mercadoria"], "Compras"],
 ];
 
+const REPORT = /(grafico|dre|tabela|planilha|relatorio|mostr|exib|gere|gerar|qual|quanto|como|metrica|indicador|resumo|analis|\?)/;
+const ACTION = /(vendi|recebi|faturei|ganhei|paguei|comprei|gastei|investi|venda de|compra de|pagamento de|recebimento de|entrou|saiu|lancar|registr)/;
+
+/** Mensagem que registra uma entrada/saída (e não uma pergunta/relatório). */
+export function isTransactionMessage(text: string) {
+  const t = norm(text);
+  if (REPORT.test(t) && !/^(registr|lanc)/.test(t)) return false;
+  const p = parseTransaction(text);
+  return ACTION.test(t) && !!p.type && !!p.amount;
+}
+
+const STOP = new Set(["reais", "real", "produto", "produtos", "hoje", "ontem", "um", "uma", "cliente", "clientes", "r"]);
+export function extractProduct(text: string): string | undefined {
+  const t = norm(text);
+  const re = /\b(?:de|em|com|do|da|dos|das)\s+([a-z]{3,})/g;
+  let m: RegExpExecArray | null; let found: string | undefined;
+  while ((m = re.exec(t))) if (!STOP.has(m[1])) found = m[1];
+  return found ? found.charAt(0).toUpperCase() + found.slice(1) : undefined;
+}
+
 export type ParsedTransaction = {
   type: "Receita" | "Despesa" | null;
   category: string | null;
   amount: number | null;
   description: string;
+  product?: string;
 };
 
 export function parseTransaction(text: string): ParsedTransaction {
@@ -156,6 +183,7 @@ export function parseTransaction(text: string): ParsedTransaction {
     category,
     amount: parseAmount(text),
     description: clean.charAt(0).toUpperCase() + clean.slice(1),
+    product: extractProduct(text),
   };
 }
 
