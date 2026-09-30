@@ -1,87 +1,10 @@
 import { useRef, useState } from "react";
-import { CalendarDays, FileUp, UploadCloud } from "lucide-react";
+import { FileUp, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  ACCEPTED_EXT, MAX_BYTES, brl, fmtSize, parseTransaction, todayISO, type Transaction, uid,
+  ACCEPTED_EXT, MAX_BYTES, fmtSize,
 } from "@/lib/finliy";
-
-/* ---------------- Cadastro Inteligente ---------------- */
-export function SmartEntryModal({
-  open, onOpenChange, onSave,
-}: { open: boolean; onOpenChange: (o: boolean) => void; onSave: (t: Transaction) => void }) {
-  const [text, setText] = useState("");
-  const [date, setDate] = useState(todayISO());
-  const p = parseTransaction(text);
-  const ready = !!(p.type && p.amount);
-
-  const submit = () => {
-    if (!ready) {
-      toast.error("Não consegui identificar o tipo e o valor. Ex.: 'vendi 500 reais em produtos de pet'");
-      return;
-    }
-    onSave({ id: uid(), date, description: p.description, category: p.category!, type: p.type!, amount: p.amount! });
-    setText("");
-    setDate(todayISO());
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-3xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Cadastro Inteligente</DialogTitle>
-          <DialogDescription className="sr-only">Descreva uma transação em uma frase</DialogDescription>
-        </DialogHeader>
-        <div className="rounded-xl bg-info p-4 text-sm text-info-foreground">
-          <b>Como funciona:</b> Digite uma frase descritiva da transação e nossa IA identificará o tipo, valor e categoria automaticamente.
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="desc" className="text-sm font-semibold">Descrição da transação</label>
-          <input
-            id="desc"
-            autoFocus
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-            placeholder="vendi 500 reais em produtos de pet"
-            className="w-full rounded-xl border border-input bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="data" className="text-sm font-semibold">Data da movimentação</label>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl border border-input px-3 py-2">
-              <CalendarDays className="size-4 text-muted-foreground" />
-              <input id="data" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-transparent text-sm outline-none" />
-            </div>
-            <button onClick={() => setDate(todayISO())} className="rounded-xl bg-muted px-4 py-2 text-sm font-medium hover:bg-accent">Hoje</button>
-          </div>
-          <p className="text-xs text-muted-foreground">Data em que a movimentação ocorreu</p>
-        </div>
-        <div className="space-y-2.5 rounded-xl bg-muted p-4 ring-1 ring-border">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Preview da Transação</p>
-          <Row label="Tipo:" value={p.type ?? "—"} tone={p.type === "Receita" ? "text-balance" : p.type === "Despesa" ? "text-expense" : ""} />
-          <Row label="Categoria:" value={p.category ?? "—"} />
-          <Row label="Valor estimado:" value={p.amount ? brl(p.amount) : "—"} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={() => onOpenChange(false)} className="rounded-xl border border-input py-3 text-sm font-semibold hover:bg-muted">Cancelar</button>
-          <button onClick={submit} disabled={!ready} className="rounded-xl bg-action py-3 text-sm font-semibold text-action-foreground transition hover:opacity-90 disabled:opacity-40">Processar</button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Row({ label, value, tone = "" }: { label: string; value: string; tone?: string }) {
-  return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={`font-semibold ${tone}`}>{value}</span>
-    </div>
-  );
-}
 
 /* ---------------- Upload de arquivos ---------------- */
 export function UploadModal({
@@ -107,7 +30,7 @@ export function UploadModal({
       <DialogContent className="max-w-lg rounded-3xl">
         <DialogHeader>
           <DialogTitle className="text-center text-xl">Faça o upload do arquivo aqui</DialogTitle>
-          <DialogDescription className="text-center">Aqui é onde acontecem os uploads de Excel, imagens e comprovantes</DialogDescription>
+          <DialogDescription className="text-center">Aqui é onde acontecem os uploads de Excel, imagens e comprovantes. Planilhas .xlsx com colunas Data, Descrição, Entrada e Saída (ou Valor) são lançadas automaticamente.</DialogDescription>
         </DialogHeader>
         <div
           onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
