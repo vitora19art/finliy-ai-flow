@@ -206,7 +206,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
     if (!prev) { toast.info("Nada para refazer aqui."); return; }
     db.updateMessages(threadId, (x) => x.filter((_, i) => i !== idx));
     if (isTransactionMessage(prev.text)) { push({ id: uid(), role: "assistant", text: "Refeito! Aqui está a sua tabela atualizada.", block: "finance" }); return; }
-    if (target.block) { push({ ...target, id: uid() }); return; }
+    if (target?.block) { push({ ...target, id: uid() }); return; }
     run(prev.text, before);
   }
 

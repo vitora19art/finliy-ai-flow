@@ -7,7 +7,7 @@ export type Transaction = {
   category: string;
   type: "Receita" | "Despesa";
   amount: number;
-  product?: string;
+  product?: string | undefined;
 };
 
 export type RoutineItem = {
@@ -113,7 +113,7 @@ export function parseAmount(text: string): number | null {
   const t = norm(text).replace(/r\$\s*/g, "");
   const m = t.match(/(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(mil|k)?/);
   if (!m) return null;
-  let raw = m[1];
+  let raw = m[1]!;
   if (/\.\d{3}/.test(raw)) raw = raw.replace(/\./g, "");
   raw = raw.replace(",", ".");
   let n = parseFloat(raw);
@@ -161,7 +161,7 @@ export type ParsedTransaction = {
   category: string | null;
   amount: number | null;
   description: string;
-  product?: string;
+  product?: string | undefined;
 };
 
 export function parseTransaction(text: string): ParsedTransaction {
@@ -199,7 +199,7 @@ export function parseRoutineCommand(text: string): Omit<RoutineItem, "id" | "don
     .replace(/\s+/g, " ")
     .trim();
   if (!activity) activity = "Nova atividade";
-  const hh = time[1].padStart(2, "0");
+  const hh = time[1]!.padStart(2, "0");
   return {
     time: `${hh}:${time[2]}`,
     activity: activity.charAt(0).toUpperCase() + activity.slice(1),
