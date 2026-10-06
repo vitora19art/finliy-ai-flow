@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import {
-  Check, Copy, FileText, Menu, Mic, MessageSquareWarning, Pencil, Plus, RefreshCw, SendHorizontal,
+  Check, Copy, FileText, Menu, Mic, Pencil, Plus, RefreshCw, SendHorizontal,
   Square, Trash2, UserCircle2, X, Paperclip, MessageSquare, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ import { aiContext, computeMetrics } from "@/lib/metrics";
 import { importTransactionsFromXlsx, sheetToText } from "@/lib/importXlsx";
 import { db, getDB, useDB } from "@/lib/store";
 import { FinanceTable, withBalance } from "./Tables";
-import { FeedbackModal, UploadModal } from "./Modals";
+import { UploadModal } from "./Modals";
 import { ChartReport, DreReport, ExportBar, MetricsReport } from "./Reports";
 
 const SUGGESTIONS = [
@@ -99,7 +99,6 @@ export default function ChatView({ threadId }: { threadId: string }) {
   const [busy, setBusy] = useState(false);
   const [menu, setMenu] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [editing, setEditing] = useState<{ id: string; title: string } | null>(null);
   const [aborter, setAborter] = useState<AbortController | null>(null);
@@ -365,9 +364,6 @@ export default function ChatView({ threadId }: { threadId: string }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={() => setFeedbackOpen(true)} className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-bold text-brand-foreground shadow-md ring-2 ring-foreground transition hover:-translate-y-0.5">
-                <MessageSquareWarning className="size-4" /> Enviar Feedback
-              </button>
               <UserCircle2 className="hidden size-9 sm:block" strokeWidth={1.5} aria-label="Perfil" />
             </div>
           </header>
@@ -454,7 +450,6 @@ export default function ChatView({ threadId }: { threadId: string }) {
       </div>
 
       <UploadModal open={uploadOpen} onOpenChange={setUploadOpen} onFiles={onFiles} />
-      <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   );
 }
