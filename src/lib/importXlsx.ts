@@ -9,8 +9,8 @@ function toISO(v: unknown): string {
   }
   const m = String(v ?? "").match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
   if (m) {
-    const y = m[3].length === 2 ? `20${m[3]}` : m[3];
-    return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    const y = m[3]!.length === 2 ? `20${m[3]}` : m[3]!;
+    return `${y}-${m[2]!.padStart(2, "0")}-${m[1]!.padStart(2, "0")}`;
   }
   const iso = String(v ?? "").match(/\d{4}-\d{2}-\d{2}/);
   return iso ? iso[0] : todayISO();
@@ -23,16 +23,16 @@ export async function importTransactionsFromXlsx(file: File): Promise<Transactio
   const wb = XLSX.read(await file.arrayBuffer());
   const out: Transaction[] = [];
   for (const name of wb.SheetNames) {
-    const rows = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[name], { header: 1, raw: true });
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[name]!, { header: 1, raw: true });
     const hIdx = rows.findIndex((r) => r.some((c) => /descri|historico/.test(n(c))));
     if (hIdx < 0) continue;
-    const h = rows[hIdx].map(n);
+    const h = rows[hIdx]!.map(n);
     const col = (re: RegExp) => h.findIndex((c) => re.test(c));
     const cData = col(/^data/), cDesc = col(/descri|historico/), cCat = col(/categ/),
       cIn = col(/entrada|receita|credito/), cOut = col(/saida|despesa|debito/), cVal = col(/^valor/), cTipo = col(/tipo/);
     for (const r of rows.slice(hIdx + 1)) {
       const desc = String(r[cDesc] ?? "").trim();
-      if (!desc || /^total/i.test(desc) || /saldo inicial/i.test(desc) && false) continue;
+      if (!desc || /^total/i.test(desc)) continue;
       let type: Transaction["type"] | null = null;
       let amount = 0;
       const vin = cIn >= 0 ? num(r[cIn]) : 0;
@@ -54,4 +54,11 @@ export async function importTransactionsFromXlsx(file: File): Promise<Transactio
     }
   }
   return out;
+}
+
+/** Converte todas as abas da planilha em texto CSV (para leitura pela IA quando as colunas não são reconhecidas). */
+export async function sheetToText(file: File): Promise<string> {
+  const XLSX = await import("xlsx");
+  const wb = XLSX.read(await file.arrayBuffer());
+  return wb.SheetNames.map((n) => `# ${n}\n${XLSX.utils.sheet_to_csv(wb.Sheets[n]!)}`).join("\n\n").slice(0, 190_000);
 }

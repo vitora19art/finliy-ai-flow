@@ -30,7 +30,7 @@ export function UploadModal({
       <DialogContent className="max-w-lg rounded-3xl">
         <DialogHeader>
           <DialogTitle className="text-center text-xl">Faça o upload do arquivo aqui</DialogTitle>
-          <DialogDescription className="text-center">Aqui é onde acontecem os uploads de Excel, imagens e comprovantes. Planilhas .xlsx com colunas Data, Descrição, Entrada e Saída (ou Valor) são lançadas automaticamente.</DialogDescription>
+          <DialogDescription className="text-center">Aqui é onde acontecem os uploads de Excel, imagens e comprovantes. Planilhas, extratos em PDF e fotos de comprovantes são lidos e lançados automaticamente.</DialogDescription>
         </DialogHeader>
         <div
           onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
@@ -44,14 +44,14 @@ export function UploadModal({
           <span className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
             <FileUp className="size-4" /> Selecionar arquivo
           </span>
-          <p className="mt-4 text-xs text-muted-foreground">Formatos suportados: PDF, DOC, DOCX, JPG, PNG, ZIP, XLSX</p>
+          <p className="mt-4 text-xs text-muted-foreground">Formatos suportados: PDF, DOC, DOCX, JPG, PNG, ZIP, XLSX, CSV</p>
           <p className="text-xs text-muted-foreground">Tamanho máximo: 20MB</p>
           <input
             ref={input}
             type="file"
             multiple
             hidden
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip,.xlsx"
+            accept=".csv,.pdf,.doc,.docx,.jpg,.jpeg,.png,.zip,.xlsx"
             onChange={(e) => { handle(e.target.files); e.target.value = ""; }}
           />
         </div>

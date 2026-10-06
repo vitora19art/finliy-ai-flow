@@ -17,14 +17,14 @@ export function exportCSV(rows: Rows, name: string) {
 export async function exportXLSX(rows: Rows, name: string) {
   const XLSX = await import("xlsx");
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"] = rows[0].map((_, i) => ({ wch: Math.max(...rows.map((r) => String(r[i] ?? "").length)) + 2 }));
+  ws["!cols"] = rows[0]!.map((_, i) => ({ wch: Math.max(...rows.map((r) => String(r[i] ?? "").length)) + 2 }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "FINLIY");
   XLSX.writeFile(wb, `${name}.xlsx`);
 }
 async function snap(el: HTMLElement) {
   const { toPng } = await import("html-to-image");
-  return toPng(el, { pixelRatio: 2, backgroundColor: "#ffffff", filter: (n) => !(n as HTMLElement).dataset?.noExport });
+  return toPng(el, { pixelRatio: 2, backgroundColor: "#ffffff", filter: (n) => !(n as HTMLElement).dataset?.["noExport"] });
 }
 export async function exportPNG(el: HTMLElement | null, name: string) {
   if (!el) return;

@@ -39,7 +39,7 @@ export const Route = createFileRoute("/api/extract")({
       POST: async ({ request }) => {
         const parsed = Body.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return Response.json({ error: "Arquivo inválido ou grande demais." }, { status: 400 });
-        const apiKey = process.env.LOVABLE_API_KEY;
+        const apiKey = process.env['LOVABLE_API_KEY'];
         if (!apiKey) return Response.json({ error: "IA não configurada" }, { status: 500 });
         const { fileName, mime, dataUrl, text } = parsed.data;
         const today = new Date().toISOString().slice(0, 10);
