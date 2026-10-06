@@ -32,7 +32,7 @@ export async function importTransactionsFromXlsx(file: File): Promise<Transactio
       cIn = col(/entrada|receita|credito/), cOut = col(/saida|despesa|debito/), cVal = col(/^valor/), cTipo = col(/tipo/);
     for (const r of rows.slice(hIdx + 1)) {
       const desc = String(r[cDesc] ?? "").trim();
-      if (!desc || /^total/i.test(desc) || /saldo inicial/i.test(desc) && false) continue;
+      if (!desc || /^total/i.test(desc)) continue;
       let type: Transaction["type"] | null = null;
       let amount = 0;
       const vin = cIn >= 0 ? num(r[cIn]) : 0;

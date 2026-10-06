@@ -207,7 +207,7 @@ export function parseRoutineCommand(text: string): Omit<RoutineItem, "id" | "don
   };
 }
 
-export const ACCEPTED_EXT = ["pdf", "doc", "docx", "jpg", "jpeg", "png", "zip", "xlsx"];
+export const ACCEPTED_EXT = ["csv", "pdf", "doc", "docx", "jpg", "jpeg", "png", "zip", "xlsx"];
 export const MAX_BYTES = 20 * 1024 * 1024;
 
 export const fmtSize = (b: number) =>
