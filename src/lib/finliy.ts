@@ -152,7 +152,7 @@ export function extractProduct(text: string): string | undefined {
   const t = norm(text);
   const re = /\b(?:de|em|com|do|da|dos|das)\s+([a-z]{3,})/g;
   let m: RegExpExecArray | null; let found: string | undefined;
-  while ((m = re.exec(t))) if (!STOP.has(m[1])) found = m[1];
+  while ((m = re.exec(t))) if (!STOP.has(m[1]!)) found = m[1];
   return found ? found.charAt(0).toUpperCase() + found.slice(1) : undefined;
 }
 

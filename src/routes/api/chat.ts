@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/chat")({
       POST: async ({ request }) => {
         const parsed = Body.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return new Response("Requisição inválida", { status: 400 });
-        const apiKey = process.env.LOVABLE_API_KEY;
+        const apiKey = process.env['LOVABLE_API_KEY'];
         if (!apiKey) return new Response("IA não configurada", { status: 500 });
         const { plan, context, messages } = parsed.data;
         try {
