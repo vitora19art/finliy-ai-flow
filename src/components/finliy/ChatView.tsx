@@ -14,7 +14,7 @@ import { aiContext, computeMetrics } from "@/lib/metrics";
 import { importTransactionsFromXlsx, sheetToText } from "@/lib/importXlsx";
 import { db, getDB, useDB } from "@/lib/store";
 import { FinanceTable, withBalance } from "./Tables";
-import { FeedbackModal, UploadModal } from "./Modals";
+import { UploadModal } from "./Modals";
 import { ChartReport, DreReport, ExportBar, MetricsReport } from "./Reports";
 
 const SUGGESTIONS = [
@@ -451,7 +451,6 @@ export default function ChatView({ threadId }: { threadId: string }) {
       </div>
 
       <UploadModal open={uploadOpen} onOpenChange={setUploadOpen} onFiles={onFiles} />
-      <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   );
 }
