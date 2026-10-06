@@ -365,9 +365,6 @@ export default function ChatView({ threadId }: { threadId: string }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={() => setFeedbackOpen(true)} className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-bold text-brand-foreground shadow-md ring-2 ring-foreground transition hover:-translate-y-0.5">
-                <MessageSquareWarning className="size-4" /> Enviar Feedback
-              </button>
               <UserCircle2 className="hidden size-9 sm:block" strokeWidth={1.5} aria-label="Perfil" />
             </div>
           </header>
