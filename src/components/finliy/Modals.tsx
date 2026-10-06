@@ -60,39 +60,3 @@ export function UploadModal({
   );
 }
 
-/* ---------------- Feedback ---------------- */
-export function FeedbackModal({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const [kind, setKind] = useState<"Sugestão" | "Erro">("Sugestão");
-  const [msg, setMsg] = useState("");
-  const [email, setEmail] = useState("");
-
-  const send = () => {
-    if (msg.trim().length < 5) { toast.error("Escreva um pouco mais sobre sua sugestão ou erro."); return; }
-    const all = JSON.parse(localStorage.getItem("finliy:feedback") ?? "[]");
-    all.push({ kind, msg: msg.trim(), email: email.trim(), at: new Date().toISOString() });
-    localStorage.setItem("finliy:feedback", JSON.stringify(all));
-    toast.success("Obrigado! Seu feedback foi enviado.");
-    setMsg(""); setEmail(""); onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-3xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Enviar Feedback</DialogTitle>
-          <DialogDescription>Sugestões e erros nos ajudam a ajustar o FINLIY às necessidades reais da sua empresa.</DialogDescription>
-        </DialogHeader>
-        <div className="grid grid-cols-2 gap-2">
-          {(["Sugestão", "Erro"] as const).map((k) => (
-            <button key={k} onClick={() => setKind(k)} className={`rounded-xl py-2.5 text-sm font-semibold transition ${kind === k ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-accent"}`}>
-              {k === "Sugestão" ? "💡 Sugestão" : "🐛 Erro"}
-            </button>
-          ))}
-        </div>
-        <textarea value={msg} onChange={(e) => setMsg(e.target.value)} rows={4} placeholder="Conte o que aconteceu ou o que você gostaria de ver…" className="w-full rounded-xl border border-input p-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
-        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Seu e-mail (opcional)" className="w-full rounded-xl border border-input px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" />
-        <button onClick={send} className="w-full rounded-xl bg-brand py-3 font-bold text-brand-foreground hover:opacity-90">Enviar feedback</button>
-      </DialogContent>
-    </Dialog>
-  );
-}
