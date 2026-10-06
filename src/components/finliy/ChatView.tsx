@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import {
-  Check, Copy, FileText, Menu, Mic, MessageSquareWarning, Pencil, Plus, RefreshCw, SendHorizontal,
+  Check, Copy, FileText, Menu, Mic, Pencil, Plus, RefreshCw, SendHorizontal,
   Square, Trash2, UserCircle2, X, Paperclip, MessageSquare, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -99,7 +99,6 @@ export default function ChatView({ threadId }: { threadId: string }) {
   const [busy, setBusy] = useState(false);
   const [menu, setMenu] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [editing, setEditing] = useState<{ id: string; title: string } | null>(null);
   const [aborter, setAborter] = useState<AbortController | null>(null);
