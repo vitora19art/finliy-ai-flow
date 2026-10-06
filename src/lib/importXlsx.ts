@@ -55,3 +55,10 @@ export async function importTransactionsFromXlsx(file: File): Promise<Transactio
   }
   return out;
 }
+
+/** Converte todas as abas da planilha em texto CSV (para leitura pela IA quando as colunas não são reconhecidas). */
+export async function sheetToText(file: File): Promise<string> {
+  const XLSX = await import("xlsx");
+  const wb = XLSX.read(await file.arrayBuffer());
+  return wb.SheetNames.map((n) => `# ${n}\n${XLSX.utils.sheet_to_csv(wb.Sheets[n])}`).join("\n\n").slice(0, 190_000);
+}
