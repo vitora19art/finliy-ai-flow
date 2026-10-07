@@ -6,6 +6,7 @@ import { FileImage, FileSpreadsheet, FileText, Sheet } from "lucide-react";
 import { toast } from "sonner";
 import { brl, type ChartKind } from "@/lib/finliy";
 import { dreRows, metricsRows, type Metrics } from "@/lib/metrics";
+import { Button } from "@/components/ui/button";
 
 /* ---------------- Exportação ---------------- */
 type Rows = (string | number)[][];
@@ -17,7 +18,7 @@ export function exportCSV(rows: Rows, name: string) {
 export async function exportXLSX(rows: Rows, name: string) {
   const XLSX = await import("xlsx");
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"] = rows[0]!.map((_, i) => ({ wch: Math.max(...rows.map((r) => String(r[i] ?? "").length)) + 2 }));
+  ws["!cols"] = (rows[0] ?? []).map((_, i) => ({ wch: Math.max(...rows.map((r) => String(r[i] ?? "").length)) + 2 }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "FINLIY");
   XLSX.writeFile(wb, `${name}.xlsx`);
@@ -61,10 +62,10 @@ export function ExportBar({
   return (
     <div className="flex flex-wrap items-center gap-2" data-no-export="true">
       <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Exportar:</span>
-      {formats.includes("csv") && rows && <button className={btn} onClick={() => exportCSV(rows, name)}><Sheet className="size-3.5" />CSV</button>}
-      {formats.includes("xlsx") && rows && <button className={btn} onClick={() => exportXLSX(rows, name)}><FileSpreadsheet className="size-3.5" />Excel (.xlsx)</button>}
-      {formats.includes("png") && <button className={btn} onClick={() => exportPNG(target?.current ?? null, name)}><FileImage className="size-3.5" />PNG</button>}
-      {formats.includes("pdf") && <button className={btn} onClick={() => exportPDF(target?.current ?? null, name)}><FileText className="size-3.5" />PDF</button>}
+      {formats.includes("csv") && rows && <Button size="sm" className={btn} onClick={() => exportCSV(rows, name)}><Sheet className="size-3.5" />CSV</Button>}
+      {formats.includes("xlsx") && rows && <Button size="sm" className={btn} onClick={() => exportXLSX(rows, name)}><FileSpreadsheet className="size-3.5" />Excel (.xlsx)</Button>}
+      {formats.includes("png") && <Button size="sm" className={btn} onClick={() => exportPNG(target?.current ?? null, name)}><FileImage className="size-3.5" />PNG</Button>}
+      {formats.includes("pdf") && <Button size="sm" className={btn} onClick={() => exportPDF(target?.current ?? null, name)}><FileText className="size-3.5" />PDF</Button>}
     </div>
   );
 }
@@ -112,6 +113,26 @@ export function DreReport({ m }: { m: Metrics }) {
 }
 
 /* ---------------- Métricas ---------------- */
+export function BasicMetrics({ m }: { m: Metrics }) {
+  const values = [
+    ["Faturamento Total", brl(m.faturamentoTotal)],
+    ["Receita Bruta", brl(m.receitaBruta)],
+    ["Ticket Médio", brl(m.ticketMedio)],
+    ["Total de Compras", brl(m.totalCompras)],
+    ["CMV", brl(m.cmv)],
+    ["Lucro Bruto", brl(m.lucroBruto)],
+    ["Margem Bruta (%)", m.fmt.pct(m.margemBruta)],
+  ];
+  return (
+    <section aria-label="Métricas básicas" className="border-b border-border pb-5">
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted-foreground">Métricas básicas</h2>
+      <dl className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-4">
+        {values.map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 break-words text-lg font-bold tabular-nums text-foreground">{value}</dd></div>)}
+      </dl>
+    </section>
+  );
+}
+
 export function MetricsReport({ m }: { m: Metrics }) {
   const ref = useRef<HTMLDivElement>(null);
   const rows = metricsRows(m);

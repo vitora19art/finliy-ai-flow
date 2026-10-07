@@ -1,4 +1,8 @@
 # FINLIY roadmap
+- [ ] Logo substituível no topo/menu e favicon correspondente
+- [ ] Conversa natural, redirecionamento e projeções
+- [ ] Lançamentos automáticos, sete métricas básicas e exportação em todas as tabelas
+- [ ] Validar lançamentos, upload, relatórios e conversa
 - [x] Chat IA natural, DRE, métricas, gráficos, exportação (CSV/XLSX/PNG/PDF)
 - [x] Remover Cadastro Inteligente
 - [x] Remover Plano Pessoal (foco 100% empresarial)

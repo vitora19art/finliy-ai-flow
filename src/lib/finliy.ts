@@ -150,6 +150,17 @@ export function isTransactionMessage(text: string) {
 }
 
 const STOP = new Set(["reais", "real", "produto", "produtos", "hoje", "ontem", "um", "uma", "cliente", "clientes", "r"]);
+export function transactionFromMessage(text: string): Transaction | null {
+  if (!isTransactionMessage(text)) return null;
+  const p = parseTransaction(text);
+  if (!p.type || !p.category || p.amount === null || !Number.isFinite(p.amount) || p.amount <= 0) return null;
+  return { id: uid(), date: todayISO(), description: p.description, category: p.category, type: p.type, amount: p.amount, product: p.product };
+}
+
+export function isCalculationRequest(text: string): boolean {
+  return /\b(se eu|se vender|se aumentar|se reduzir|calcule|calcular|quanto e|quanto da)\b|projec|estimativ|\d\s*%|\d\s*[+*/=]/.test(norm(text));
+}
+
 export function extractProduct(text: string): string | undefined {
   const t = norm(text);
   const re = /\b(?:de|em|com|do|da|dos|das)\s+([a-z]{3,})/g;
