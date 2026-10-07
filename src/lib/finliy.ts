@@ -22,9 +22,11 @@ export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   text: string;
-  block?: "finance" | "routine" | "blocked" | "file" | "dre" | "metrics" | "chart";
+  block?: "finance" | "routine" | "blocked" | "file" | "dre" | "metrics" | "chart" | "confirm";
   chart?: ChartKind;
   file?: { name: string; size: number };
+  pending?: Transaction;
+  status?: "confirmed" | "cancelled";
 };
 
 export type ChartKind = "faturamento" | "compras" | "comparativo" | "despesas-pizza" | "saldo-linha" | "margem-produto";
