@@ -8,14 +8,17 @@ import {
 import { toast } from "sonner";
 import {
   type ChartKind, type ChatMessage, type Transaction,
-  brl, fmtDate, fmtSize, isTransactionMessage, parseTransaction, todayISO, uid,
+  brl, fmtDate, fmtSize, isTransactionMessage, isCalculationRequest, transactionFromMessage, todayISO, uid,
 } from "@/lib/finliy";
 import { aiContext, computeMetrics } from "@/lib/metrics";
 import { importTransactionsFromXlsx, sheetToText } from "@/lib/importXlsx";
 import { db, getDB, useDB } from "@/lib/store";
 import { FinanceTable, withBalance } from "./Tables";
 import { UploadModal } from "./Modals";
-import { ChartReport, DreReport, ExportBar, MetricsReport } from "./Reports";
+import { BasicMetrics, ChartReport, DreReport, MetricsReport } from "./Reports";
+import { Logo } from "./Logo";
+import { FinancialMessage } from "./FinancialMessage";
+import { Button } from "@/components/ui/button";
 
 const SUGGESTIONS = [
   "Mostre a tabela de DRE",
@@ -29,6 +32,7 @@ const SUGGESTIONS = [
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 function detectReport(text: string): Pick<ChatMessage, "block" | "chart" | "text"> | null {
+  if (isCalculationRequest(text)) return null;
   const t = norm(text);
   if (/grafico|chart|pizza|linha|barras/.test(t)) {
     let chart: ChartKind = "comparativo";
@@ -75,21 +79,6 @@ async function extractWithAI(f: File, text?: string): Promise<{ transactions: Tr
   return { transactions: txs, summary: data.summary ?? "" };
 }
 
-export function Logo({ className = "" }: { className?: string }) {
-  return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <svg viewBox="0 0 48 48" className="size-9" aria-hidden>
-        <path d="M24 6a18 18 0 1 0 17 24" fill="none" className="stroke-brand" strokeWidth="5" strokeLinecap="round" />
-        <path d="M22 1l8 5-8 5z" className="fill-brand" />
-        <rect x="16" y="13" width="20" height="24" rx="3" fill="none" className="stroke-foreground" strokeWidth="3" />
-        <rect x="28" y="21" width="10" height="8" rx="2" className="fill-card stroke-foreground" strokeWidth="3" />
-        <circle cx="32" cy="25" r="1.6" className="fill-foreground" />
-      </svg>
-      <span className="text-2xl font-extrabold tracking-tight">FINLIY</span>
-    </div>
-  );
-}
-
 export default function ChatView({ threadId }: { threadId: string }) {
   const navigate = useNavigate();
   const { txs, threads } = useDB();
@@ -104,7 +93,6 @@ export default function ChatView({ threadId }: { threadId: string }) {
   const [aborter, setAborter] = useState<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const financeRef = useRef<HTMLDivElement>(null);
 
   const metrics = useMemo(() => computeMetrics(txs), [txs]);
 
@@ -117,12 +105,12 @@ export default function ChatView({ threadId }: { threadId: string }) {
 
   function localResponse(text: string): ChatMessage | null {
     if (isTransactionMessage(text)) {
-      const pt = parseTransaction(text);
-      const tx: Transaction = { id: uid(), date: todayISO(), description: pt.description, category: pt.category!, type: pt.type!, amount: pt.amount!, product: pt.product };
-      if (!Number.isFinite(tx.amount) || tx.amount <= 0) return { id: uid(), role: "assistant", text: "Não consegui identificar um valor válido. Informe o valor, por exemplo: *\"comprei 200 reais de embalagem\"*." };
+      const tx = transactionFromMessage(text);
+      if (!tx) return { id: uid(), role: "assistant", text: "Não consegui identificar um valor válido. Informe o valor, por exemplo: *\"comprei 200 reais de embalagem\"*." };
+      db.addTxs([tx]);
       return {
-        id: uid(), role: "assistant", block: "confirm", pending: tx,
-        text: `Confira os dados antes de registrar:\n\n- **Tipo:** ${tx.type}\n- **Valor:** ${brl(tx.amount)}\n- **Categoria:** ${tx.category}${tx.product ? `\n- **Produto:** ${tx.product}` : ""}\n- **Data:** ${fmtDate(tx.date)}`,
+        id: uid(), role: "assistant", block: "finance",
+        text: `Pronto! Registrei ${tx.type === "Receita" ? "uma entrada" : "uma saída"} de **${brl(tx.amount)}** em **${tx.category}**, em ${fmtDate(tx.date)}. Suas métricas, DRE e gráficos já foram atualizados.`,
       };
     }
     const rep = detectReport(text);
@@ -136,7 +124,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
     setAborter(ctrl);
     const cur = getDB();
     const context = aiContext(computeMetrics(cur.txs), cur.txs);
-    const msgs = history.filter((m) => m.text && m.block !== "file").slice(-20).map((m) => ({ role: m.role, content: m.text.slice(0, 6000) }));
+    const msgs = history.filter((m) => m.text && m.block !== "file").map((m) => ({ role: m.role, content: m.text.slice(0, 6000) }));
     let acc = "";
     try {
       const res = await fetch("/api/chat", {
@@ -355,7 +343,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
           <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <button onClick={() => setMenu(true)} className="lg:hidden" aria-label="Abrir menu"><Menu className="size-7" /></button>
-              <Logo className="lg:hidden" />
+               <Logo />
               <div className="hidden min-w-0 lg:block">
                 <h1 className="truncate text-lg font-extrabold">{thread?.title ?? "Novo chat"}</h1>
                 <p className="text-xs text-muted-foreground">Assistente de inteligência financeira e empresarial</p>
@@ -368,6 +356,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
 
           <main className="flex-1 overflow-y-auto bg-background px-3 py-6 sm:px-8">
             <div className="mx-auto max-w-5xl space-y-5">
+              <BasicMetrics m={metrics} />
               {messages.map((m, idx) =>
                 m.role === "user" ? (
                   <div key={m.id} className="flex justify-end animate-rise">
@@ -390,22 +379,18 @@ export default function ChatView({ threadId }: { threadId: string }) {
                         <p className="pl-2 text-sm font-bold text-muted-foreground">{m.status === "confirmed" ? "✅ Lançamento registrado. Tabela, DRE e métricas atualizadas." : "❌ Lançamento cancelado."}</p>
                       ) : (
                         <div className="flex gap-2 pl-2">
-                          <button className="rounded-full bg-action px-4 py-2 text-sm font-bold text-action-foreground" onClick={() => {
-                            db.addTxs([m.pending!]);
+                           <Button className="rounded-full bg-action px-4 py-2 text-sm font-bold text-action-foreground" onClick={() => {
+                             if (!m.pending) return;
+                             db.addTxs([m.pending]);
                             db.updateMessages(threadId, (x) => x.map((y) => y.id === m.id ? { ...y, status: "confirmed" } : y));
-                          }}>Confirmar e registrar</button>
+                           }}>Confirmar e registrar</Button>
                           <button className="rounded-full border border-border px-4 py-2 text-sm font-bold" onClick={() =>
                             db.updateMessages(threadId, (x) => x.map((y) => y.id === m.id ? { ...y, status: "cancelled" } : y))
                           }>Cancelar</button>
                         </div>
                       )
                     )}
-                    {m.block === "finance" && (
-                      <div className="space-y-3">
-                        <div ref={idx === lastIdx ? financeRef : undefined}><FinanceTable txs={txs} /></div>
-                        <ExportBar rows={financeRows()} name="finliy-controle-financeiro" target={financeRef} formats={idx === lastIdx ? ["csv", "xlsx", "png", "pdf"] : ["csv", "xlsx"]} />
-                      </div>
-                    )}
+                    {m.block === "finance" && <FinancialMessage txs={txs} />}
                     {m.block === "dre" && <DreReport m={metrics} />}
                     {m.block === "metrics" && <MetricsReport m={metrics} />}
                     {m.block === "chart" && m.chart && <ChartReport kind={m.chart} m={metrics} />}
