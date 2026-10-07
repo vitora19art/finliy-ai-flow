@@ -119,12 +119,10 @@ export default function ChatView({ threadId }: { threadId: string }) {
     if (isTransactionMessage(text)) {
       const pt = parseTransaction(text);
       const tx: Transaction = { id: uid(), date: todayISO(), description: pt.description, category: pt.category!, type: pt.type!, amount: pt.amount!, product: pt.product };
-      db.addTxs([tx]);
-      const emoji = tx.type === "Receita" ? "💰" : "🧾";
+      if (!Number.isFinite(tx.amount) || tx.amount <= 0) return { id: uid(), role: "assistant", text: "Não consegui identificar um valor válido. Informe o valor, por exemplo: *\"comprei 200 reais de embalagem\"*." };
       return {
-        id: uid(), role: "assistant",
-        text: `${emoji} Anotado! Registrei uma **${tx.type.toLowerCase()}** de **${brl(tx.amount)}** na categoria **${tx.category}**${tx.product ? ` (produto: ${tx.product})` : ""}, com data de hoje (${fmtDate(tx.date)}). Sua tabela, DRE e gráficos já foram atualizados.`,
-        block: "finance",
+        id: uid(), role: "assistant", block: "confirm", pending: tx,
+        text: `Confira os dados antes de registrar:\n\n- **Tipo:** ${tx.type}\n- **Valor:** ${brl(tx.amount)}\n- **Categoria:** ${tx.category}${tx.product ? `\n- **Produto:** ${tx.product}` : ""}\n- **Data:** ${fmtDate(tx.date)}`,
       };
     }
     const rep = detectReport(text);
@@ -387,6 +385,21 @@ export default function ChatView({ threadId }: { threadId: string }) {
                         <ReactMarkdown>{m.text}</ReactMarkdown>
                       </div>
                     ) : typing}
+                    {m.block === "confirm" && m.pending && (
+                      m.status ? (
+                        <p className="pl-2 text-sm font-bold text-muted-foreground">{m.status === "confirmed" ? "✅ Lançamento registrado. Tabela, DRE e métricas atualizadas." : "❌ Lançamento cancelado."}</p>
+                      ) : (
+                        <div className="flex gap-2 pl-2">
+                          <button className="rounded-full bg-action px-4 py-2 text-sm font-bold text-action-foreground" onClick={() => {
+                            db.addTxs([m.pending!]);
+                            db.updateMessages(threadId, (x) => x.map((y) => y.id === m.id ? { ...y, status: "confirmed" } : y));
+                          }}>Confirmar e registrar</button>
+                          <button className="rounded-full border border-border px-4 py-2 text-sm font-bold" onClick={() =>
+                            db.updateMessages(threadId, (x) => x.map((y) => y.id === m.id ? { ...y, status: "cancelled" } : y))
+                          }>Cancelar</button>
+                        </div>
+                      )
+                    )}
                     {m.block === "finance" && (
                       <div className="space-y-3">
                         <div ref={idx === lastIdx ? financeRef : undefined}><FinanceTable txs={txs} /></div>
