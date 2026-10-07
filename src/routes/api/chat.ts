@@ -18,12 +18,8 @@ REGRAS OBRIGATÓRIAS:
 3. SEM INVENÇÃO: Se o valor/período/item pedido não constar em DADOS, responda claramente: "Não encontrei lançamentos registrados para este período/item." Nunca estime.
 4. O app gera automaticamente tabela, DRE, métricas e gráficos quando o usuário pede (ex.: "mostre a DRE", "gere um gráfico do faturamento por período") e registra lançamentos ditos em frases (ex.: "comprei 200 de embalagem") com confirmação. Oriente com a frase exata quando útil.
 
-DADOS CALCULADOS PELO SISTEMA:`;
-const SYSTEM_DATA = (context: string) => `
-${context}`;
-
-DADOS ATUAIS DO USUÁRIO:
-${context}`;
+DADOS CALCULADOS PELO SISTEMA:
+${context || "Nenhum lançamento registrado."}`;
 
 export const Route = createFileRoute("/api/chat")({
   server: {
