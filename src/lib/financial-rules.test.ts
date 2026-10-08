@@ -22,6 +22,7 @@ describe("FINLIY financial rules", () => {
     const csv = "Data;Descrição;Categoria;Entrada;Saída\n07/10/2026;Venda;Vendas;1000;0\n07/10/2026;Compra de estoque;Compras;0;300";
     const rows: Transaction[] = await importTransactionsFromXlsx(new File([csv], "financeiro.csv", { type: "text/csv" }));
     expect(rows).toHaveLength(2);
+    expect(rows.map((row) => row.date)).toEqual(["2026-10-07", "2026-10-07"]);
     const m = computeMetrics(rows);
     expect(m.faturamentoTotal).toBe(1000);
     expect(m.receitaBruta).toBe(1000);
