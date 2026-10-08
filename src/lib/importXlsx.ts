@@ -20,7 +20,9 @@ const num = (v: unknown) => (typeof v === "number" ? v : parseAmount(String(v ??
 /** Lê uma planilha .xlsx e converte em transações (colunas: Data, Descrição, Categoria, Entrada, Saída ou Valor/Tipo). */
 export async function importTransactionsFromXlsx(file: File): Promise<Transaction[]> {
   const XLSX = await import("xlsx");
-  const wb = XLSX.read(await file.arrayBuffer());
+  const wb = file.name.toLowerCase().endsWith(".csv")
+    ? XLSX.read(await file.text(), { type: "string" })
+    : XLSX.read(await file.arrayBuffer());
   const out: Transaction[] = [];
   for (const name of wb.SheetNames) {
     const rows = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[name]!, { header: 1, raw: true });
@@ -59,6 +61,8 @@ export async function importTransactionsFromXlsx(file: File): Promise<Transactio
 /** Converte todas as abas da planilha em texto CSV (para leitura pela IA quando as colunas não são reconhecidas). */
 export async function sheetToText(file: File): Promise<string> {
   const XLSX = await import("xlsx");
-  const wb = XLSX.read(await file.arrayBuffer());
+  const wb = file.name.toLowerCase().endsWith(".csv")
+    ? XLSX.read(await file.text(), { type: "string" })
+    : XLSX.read(await file.arrayBuffer());
   return wb.SheetNames.map((n) => `# ${n}\n${XLSX.utils.sheet_to_csv(wb.Sheets[n]!)}`).join("\n\n").slice(0, 190_000);
 }
