@@ -1,6 +1,6 @@
 @import "tailwindcss" source(none);
-@source "../src";
 @import "tw-animate-css";
+@source "../src";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -116,6 +116,65 @@
   --sidebar-accent-foreground: oklch(0.12 0 0);
   --sidebar-border: oklch(0.9 0 0);
   --sidebar-ring: oklch(0.6 0.19 258);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.18 0.004 160);
+  --foreground: oklch(0.94 0.004 160);
+  --card: oklch(0.23 0.004 160);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.31 0.005 160);
+  --primary-foreground: oklch(0.97 0 0);
+  --secondary: oklch(0.28 0.005 160);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.27 0.005 160);
+  --muted-foreground: oklch(0.75 0.005 160);
+  --accent: oklch(0.34 0.007 160);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.36 0.006 160);
+  --input: var(--border);
+  --ring: oklch(0.76 0.14 152);
+  --brand: oklch(0.43 0.10 152);
+  --brand-foreground: oklch(0.98 0 0);
+  --navy: oklch(0.79 0.08 250);
+  --navy-foreground: oklch(0.16 0.025 250);
+  --navy-soft: oklch(0.29 0.025 250);
+  --income: oklch(0.78 0.12 250);
+  --expense: oklch(0.76 0.15 27);
+  --destructive: var(--expense);
+  --destructive-foreground: oklch(0.16 0 0);
+  --balance: oklch(0.78 0.15 148);
+  --action: oklch(0.77 0.12 250);
+  --action-foreground: oklch(0.16 0.025 250);
+  --info: oklch(0.29 0.025 250);
+  --info-foreground: var(--income);
+  --warn: oklch(0.38 0.075 88);
+  --warn-foreground: oklch(0.93 0.08 88);
+  --plan: oklch(0.7 0 0);
+  --sidebar: oklch(0.21 0.004 160);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+.recharts-cartesian-axis-tick text,
+.recharts-pie-label-text {
+  fill: var(--muted-foreground);
+}
+.recharts-default-tooltip {
+  background-color: var(--popover) !important;
+  border-color: var(--border) !important;
+  color: var(--popover-foreground) !important;
+}
+.recharts-tooltip-cursor {
+  fill: var(--muted);
 }
 
 @layer base {

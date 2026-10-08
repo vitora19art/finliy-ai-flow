@@ -15,7 +15,9 @@ import { importTransactionsFromXlsx, sheetToText } from "@/lib/importXlsx";
 import { db, getDB, useDB } from "@/lib/store";
 import { FinanceTable, withBalance } from "./Tables";
 import { UploadModal } from "./Modals";
-import { BasicMetrics, ChartReport, DreReport, MetricsReport } from "./Reports";
+import { ChartReport, DreReport, MetricsReport } from "./Reports";
+import { ThemeToggle } from "./ThemeToggle";
+import { isExplicitReportRequest } from "@/lib/reportVisibility";
 import { Logo } from "./Logo";
 import { FinancialMessage } from "./FinancialMessage";
 import { Button } from "@/components/ui/button";
@@ -32,7 +34,7 @@ const SUGGESTIONS = [
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 function detectReport(text: string): Pick<ChatMessage, "block" | "chart" | "text"> | null {
-  if (isCalculationRequest(text)) return null;
+  if (isCalculationRequest(text) || !isExplicitReportRequest(text)) return null;
   const t = norm(text);
   if (/grafico|chart|pizza|linha|barras/.test(t)) {
     let chart: ChartKind = "comparativo";
@@ -109,7 +111,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
       if (!tx) return { id: uid(), role: "assistant", text: "Não consegui identificar um valor válido. Informe o valor, por exemplo: *\"comprei 200 reais de embalagem\"*." };
       db.addTxs([tx]);
       return {
-        id: uid(), role: "assistant", block: "finance",
+        id: uid(), role: "assistant",
         text: `Pronto! Registrei ${tx.type === "Receita" ? "uma entrada" : "uma saída"} de **${brl(tx.amount)}** em **${tx.category}**, em ${fmtDate(tx.date)}. Suas métricas, DRE e gráficos já foram atualizados.`,
       };
     }
@@ -190,7 +192,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
     const target = messages[idx];
     if (!prev) { toast.info("Nada para refazer aqui."); return; }
     db.updateMessages(threadId, (x) => x.filter((_, i) => i !== idx));
-    if (isTransactionMessage(prev.text)) { push({ id: uid(), role: "assistant", text: "Refeito! Aqui está a sua tabela atualizada.", block: "finance" }); return; }
+    if (isTransactionMessage(prev.text)) { push({ id: uid(), role: "assistant", text: "O lançamento já está registrado na sua base financeira." }); return; }
     if (target?.block) { push({ ...target, id: uid() }); return; }
     run(prev.text, before);
   }
@@ -237,7 +239,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
         const inc = result.transactions.filter((t) => t.type === "Receita").reduce((s, t) => s + t.amount, 0);
         const out = result.transactions.filter((t) => t.type === "Despesa").reduce((s, t) => s + t.amount, 0);
         db.updateMessages(threadId, (x) => x.map((m) => m.id === statusId ? {
-          ...m, block: "finance",
+          ...m,
           text: `📥 Pronto! Extraí **${result.transactions.length} lançamentos** de **${f.name}**: ${brl(inc)} em entradas e ${brl(out)} em saídas.${result.summary ? `\n\n_${result.summary}_` : ""}\n\nTabela, DRE, métricas e gráficos já usam esses dados.`,
         } : m));
       } catch (e) {
@@ -311,9 +313,6 @@ export default function ChatView({ threadId }: { threadId: string }) {
           );
         })}
       </div>
-      <div className="rounded-2xl bg-muted p-3 text-xs text-muted-foreground">
-        <b className="text-foreground">{txs.length}</b> lançamentos na base · Saldo <b className="text-foreground">{brl(metrics.receitaBruta + (txs.find((t) => t.category === "Saldo inicial")?.amount ?? 0) - metrics.cmv - metrics.despesasOperacionais)}</b>
-      </div>
     </nav>
   );
 
@@ -350,13 +349,13 @@ export default function ChatView({ threadId }: { threadId: string }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <ThemeToggle />
               <UserCircle2 className="hidden size-9 sm:block" strokeWidth={1.5} aria-label="Perfil" />
             </div>
           </header>
 
           <main className="flex-1 overflow-y-auto bg-background px-3 py-6 sm:px-8">
             <div className="mx-auto max-w-5xl space-y-5">
-              <BasicMetrics m={metrics} />
               {messages.map((m, idx) =>
                 m.role === "user" ? (
                   <div key={m.id} className="flex justify-end animate-rise">
@@ -390,10 +389,12 @@ export default function ChatView({ threadId }: { threadId: string }) {
                         </div>
                       )
                     )}
-                    {m.block === "finance" && <FinancialMessage txs={txs} />}
-                    {m.block === "dre" && <DreReport m={metrics} />}
-                    {m.block === "metrics" && <MetricsReport m={metrics} />}
-                    {m.block === "chart" && m.chart && <ChartReport kind={m.chart} m={metrics} />}
+                    {isExplicitReportRequest(messages.slice(0, idx).findLast((previous) => previous.role === "user")?.text ?? "") && <>
+                      {m.block === "finance" && <FinancialMessage txs={txs} />}
+                      {m.block === "dre" && <DreReport m={metrics} />}
+                      {m.block === "metrics" && <MetricsReport m={metrics} />}
+                      {m.block === "chart" && m.chart && <ChartReport kind={m.chart} m={metrics} />}
+                    </>}
                     {(m.text || m.block) && !(busy && idx === lastIdx) && idx > 0 && (
                       <div className="flex items-center gap-4 pl-2 text-sm font-bold">
                         <button onClick={() => redo(idx)} className="inline-flex items-center gap-1.5 hover:text-action">Refazer <RefreshCw className="size-4" /></button>
