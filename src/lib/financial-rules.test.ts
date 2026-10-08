@@ -1,3 +1,4 @@
+/// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import { isCalculationRequest, transactionFromMessage, type Transaction } from "./finliy";
 import { computeMetrics } from "./metrics";
