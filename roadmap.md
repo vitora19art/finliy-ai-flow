@@ -1,4 +1,7 @@
 # FINLIY roadmap
+- [ ] Exibir métricas e relatórios somente quando solicitados no chat
+- [ ] Alternância claro/escuro para chat, menus, tabelas e gráficos
+- [ ] Validar solicitações de relatórios e persistência do tema
 - [x] Logo substituível no topo/menu e favicon correspondente
 - [x] Conversa natural, redirecionamento e projeções
 - [x] Lançamentos automáticos, sete métricas básicas e exportação em todas as tabelas

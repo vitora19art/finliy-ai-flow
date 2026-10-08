@@ -25,7 +25,8 @@ export async function exportXLSX(rows: Rows, name: string) {
 }
 async function snap(el: HTMLElement) {
   const { toPng } = await import("html-to-image");
-  return toPng(el, { pixelRatio: 2, backgroundColor: "#ffffff", filter: (n) => !(n as HTMLElement).dataset?.["noExport"] });
+  const backgroundColor = getComputedStyle(document.documentElement).getPropertyValue("--card").trim();
+  return toPng(el, { pixelRatio: 2, backgroundColor, filter: (n) => !(n as HTMLElement).dataset?.["noExport"] });
 }
 export async function exportPNG(el: HTMLElement | null, name: string) {
   if (!el) return;
