@@ -32,6 +32,7 @@ const SUGGESTIONS = [
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const REPORT_BLOCKS = new Set(["finance", "dre", "metrics", "chart"]);
 
 function detectReport(text: string): Pick<ChatMessage, "block" | "chart" | "text"> | null {
   if (isCalculationRequest(text) || !isExplicitReportRequest(text)) return null;
@@ -381,7 +382,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
                         {m.text.startsWith("🔎") && <Loader2 className="mr-2 inline size-4 animate-spin" />}
                         <ReactMarkdown>{m.text}</ReactMarkdown>
                       </div>
-                    ) : typing}
+                    ) : REPORT_BLOCKS.has(m.block ?? "") ? null : typing}
                     {m.block === "confirm" && m.pending && (
                       m.status ? (
                         <p className="pl-2 text-sm font-bold text-muted-foreground">{m.status === "confirmed" ? "✅ Lançamento registrado. Tabela, DRE e métricas atualizadas." : "❌ Lançamento cancelado."}</p>
@@ -398,12 +399,17 @@ export default function ChatView({ threadId }: { threadId: string }) {
                         </div>
                       )
                     )}
-                    {isExplicitReportRequest(previousUserText(messages, idx)) && <>
+                    {isExplicitReportRequest(previousUserText(messages, idx)) && REPORT_BLOCKS.has(m.block ?? "") && (txs.length === 0 ? (
+                      <div role="status" className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card px-6 py-10 text-center text-card-foreground">
+                        <Paperclip className="size-8 text-muted-foreground" />
+                        <p className="max-w-md text-sm font-semibold">Nenhum arquivo encontrado. Faça o upload da sua planilha/nota fiscal para visualizar os dados reais.</p>
+                      </div>
+                    ) : <>
                       {m.block === "finance" && <FinancialMessage txs={txs} />}
                       {m.block === "dre" && <DreReport m={metrics} />}
                       {m.block === "metrics" && <MetricsReport m={metrics} />}
                       {m.block === "chart" && m.chart && <ChartReport kind={m.chart} m={metrics} />}
-                    </>}
+                    </>)}
                     {(m.text || m.block) && !(busy && idx === lastIdx) && idx > 0 && (
                       <div className="flex items-center gap-4 pl-2 text-sm font-bold">
                         <button onClick={() => redo(idx)} className="inline-flex items-center gap-1.5 hover:text-action">Refazer <RefreshCw className="size-4" /></button>
