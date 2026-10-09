@@ -1,11 +1,11 @@
 # FINLIY roadmap
-- [ ] Renderizar DRE, métricas, tabelas e gráficos por intenção em texto livre
-- [ ] Remover dados fictícios e usar apenas lançamentos reais digitados ou enviados
-- [ ] Responder amigavelmente quando um relatório for solicitado sem dados
-- [ ] Manter exportações CSV, Excel, PNG e PDF nos relatórios sob demanda
-- [ ] Exibir métricas e relatórios somente quando solicitados no chat
-- [ ] Alternância claro/escuro para chat, menus, tabelas e gráficos
-- [ ] Validar solicitações de relatórios e persistência do tema
+- [x] Renderizar DRE, métricas, tabelas e gráficos por intenção em texto livre
+- [x] Remover dados fictícios e usar apenas lançamentos reais digitados ou enviados
+- [x] Responder amigavelmente quando um relatório for solicitado sem dados
+- [x] Manter exportações CSV, Excel, PNG e PDF nos relatórios sob demanda
+- [x] Exibir métricas e relatórios somente quando solicitados no chat
+- [x] Alternância claro/escuro para chat, menus, tabelas e gráficos
+- [x] Validar solicitações de relatórios e persistência do tema
 - [x] Logo substituível no topo/menu e favicon correspondente
 - [x] Conversa natural, redirecionamento e projeções
 - [x] Lançamentos automáticos, sete métricas básicas e exportação em todas as tabelas

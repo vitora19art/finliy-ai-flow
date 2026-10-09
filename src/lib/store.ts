@@ -12,7 +12,7 @@ const EMPTY: State = { txs: [], threads: [] };
 export const welcome = (): ChatMessage[] => [
   {
     id: uid(), role: "assistant",
-    text: "Olá! 👋 Sou o **FINLIY**, seu assistente de inteligência financeira e empresarial.\n\n📎 **Comece enviando seus arquivos** (Excel, CSV, PDF ou fotos de comprovantes) pelo botão de upload — eu leio, extraio e lanço tudo automaticamente na tabela, DRE, métricas e gráficos.\n\nVocê também pode registrar pelo chat (ex.: *\"vendi 500 reais em produtos de pet\"*) ou pedir *\"Mostre a tabela de DRE\"*.",
+    text: "Olá! 👋 Sou o **FINLIY**, seu assistente de inteligência financeira e empresarial.\n\n📎 **Comece enviando seus arquivos** (Excel, CSV, PDF ou fotos de comprovantes) pelo botão de upload — eu leio, extraio e salvo tudo na sua base financeira.\n\nDepois, peça no chat para ver tabelas, DRE, métricas ou gráficos com esses dados reais. Você também pode registrar pelo chat, por exemplo: *\"vendi 500 reais em produtos de pet\"*.",
   },
 ];
 
@@ -38,7 +38,7 @@ function read(): State {
   } catch {
     state = { txs: [], threads: [] };
   }
-  return state!;
+  return state ?? EMPTY;
 }
 function write(next: State) {
   state = next;
