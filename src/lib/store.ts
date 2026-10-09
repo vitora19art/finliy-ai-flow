@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { seedTransactions, uid, type ChatMessage, type Transaction } from "./finliy";
+import { uid, type ChatMessage, type Transaction } from "./finliy";
 
 export type Thread = { id: string; title: string; updatedAt: number; messages: ChatMessage[] };
 type State = { txs: Transaction[]; threads: Thread[] };
@@ -21,9 +21,22 @@ function read(): State {
   if (typeof window === "undefined") return EMPTY;
   try {
     const raw = localStorage.getItem(KEY);
-    state = raw ? JSON.parse(raw) : { txs: seedTransactions, threads: [] };
+    state = raw ? JSON.parse(raw) : { txs: [], threads: [] };
+    if (state) {
+      const legacyExamples = new Set([
+        "2026-07-01|Saldo inicial", "2026-07-02|Venda de produtos pet", "2026-07-03|Pagamento de fornecedores (ração pet)",
+        "2026-07-04|Conta de energia", "2026-07-05|Recebimento de cliente", "2026-07-06|Folha de pagamento",
+        "2026-07-07|Compra de materiais (acessórios)", "2026-07-08|Venda de serviços", "2026-07-09|Internet e telefone",
+        "2026-07-10|Manutenção de equipamentos", "2026-07-11|Venda de acessórios", "2026-07-12|Anúncios no Instagram",
+      ]);
+      const txs = state.txs.filter((transaction) => !legacyExamples.has(`${transaction.date}|${transaction.description}`));
+      if (txs.length !== state.txs.length) {
+        state = { ...state, txs };
+        localStorage.setItem(KEY, JSON.stringify(state));
+      }
+    }
   } catch {
-    state = { txs: seedTransactions, threads: [] };
+    state = { txs: [], threads: [] };
   }
   return state!;
 }

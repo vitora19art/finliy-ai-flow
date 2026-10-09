@@ -47,21 +47,6 @@ export const todayISO = () => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
-export const seedTransactions: Transaction[] = [
-  { id: uid(), date: "2026-07-01", description: "Saldo inicial", category: "Saldo inicial", type: "Receita", amount: 10000 },
-  { id: uid(), date: "2026-07-02", description: "Venda de produtos pet", category: "Vendas", type: "Receita", amount: 3500, product: "Pet" },
-  { id: uid(), date: "2026-07-03", description: "Pagamento de fornecedores (ração pet)", category: "Fornecedores", type: "Despesa", amount: 2000, product: "Pet" },
-  { id: uid(), date: "2026-07-04", description: "Conta de energia", category: "Contas e Utilidades", type: "Despesa", amount: 450 },
-  { id: uid(), date: "2026-07-05", description: "Recebimento de cliente", category: "Recebimentos", type: "Receita", amount: 1800, product: "Serviços" },
-  { id: uid(), date: "2026-07-06", description: "Folha de pagamento", category: "Folha de Pagamento", type: "Despesa", amount: 4200 },
-  { id: uid(), date: "2026-07-07", description: "Compra de materiais (acessórios)", category: "Compras", type: "Despesa", amount: 900, product: "Acessórios" },
-  { id: uid(), date: "2026-07-08", description: "Venda de serviços", category: "Serviços", type: "Receita", amount: 2600, product: "Serviços" },
-  { id: uid(), date: "2026-07-09", description: "Internet e telefone", category: "Contas e Utilidades", type: "Despesa", amount: 180 },
-  { id: uid(), date: "2026-07-10", description: "Manutenção de equipamentos", category: "Manutenção", type: "Despesa", amount: 520 },
-  { id: uid(), date: "2026-07-11", description: "Venda de acessórios", category: "Vendas", type: "Receita", amount: 1400, product: "Acessórios" },
-  { id: uid(), date: "2026-07-12", description: "Anúncios no Instagram", category: "Marketing", type: "Despesa", amount: 300 },
-];
-
 const r = (time: string, activity: string, duration: string): RoutineItem => ({
   id: uid(), time, activity, duration, done: false,
 });
