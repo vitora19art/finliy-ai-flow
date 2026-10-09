@@ -27,7 +27,7 @@ const SUGGESTIONS = [
   "Gere um gráfico do faturamento por período",
   "Mostre as métricas financeiras",
   "Gráfico de pizza das despesas",
-  "Produtos com maior e menor margem",
+  "Mostre o gráfico de margem por produto",
   "Como posso cortar custos?",
 ];
 
@@ -124,11 +124,8 @@ export default function ChatView({ threadId }: { threadId: string }) {
       };
     }
     const rep = detectReport(text);
-    if (rep && txs.length === 0) return {
-      id: uid(), role: "assistant",
-      text: "Você ainda não enviou nenhum arquivo ou lançamento. Faça o upload de uma planilha/nota para eu gerar seus gráficos e DRE reais!",
-    };
-    return rep ? { id: uid(), role: "assistant", ...rep } : null;
+    if (!rep) return null;
+    return { id: uid(), role: "assistant", ...rep, text: getDB().txs.length === 0 ? "" : rep.text };
   }
 
   async function aiResponse(history: ChatMessage[]) {
