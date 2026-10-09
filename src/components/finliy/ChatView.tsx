@@ -52,6 +52,14 @@ function detectReport(text: string): Pick<ChatMessage, "block" | "chart" | "text
   return null;
 }
 
+function previousUserText(messages: ChatMessage[], beforeIndex: number) {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role === "user") return message.text;
+  }
+  return "";
+}
+
 const readDataUrl = (f: File) =>
   new Promise<string>((res, rej) => {
     const r = new FileReader();
@@ -116,6 +124,10 @@ export default function ChatView({ threadId }: { threadId: string }) {
       };
     }
     const rep = detectReport(text);
+    if (rep && txs.length === 0) return {
+      id: uid(), role: "assistant",
+      text: "Você ainda não enviou nenhum arquivo ou lançamento. Faça o upload de uma planilha/nota para eu gerar seus gráficos e DRE reais!",
+    };
     return rep ? { id: uid(), role: "assistant", ...rep } : null;
   }
 
@@ -389,7 +401,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
                         </div>
                       )
                     )}
-                    {isExplicitReportRequest(messages.slice(0, idx).findLast((previous) => previous.role === "user")?.text ?? "") && <>
+                    {isExplicitReportRequest(previousUserText(messages, idx)) && <>
                       {m.block === "finance" && <FinancialMessage txs={txs} />}
                       {m.block === "dre" && <DreReport m={metrics} />}
                       {m.block === "metrics" && <MetricsReport m={metrics} />}

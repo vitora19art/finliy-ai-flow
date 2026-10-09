@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { seedTransactions, uid, type ChatMessage, type Transaction } from "./finliy";
+import { uid, type ChatMessage, type Transaction } from "./finliy";
 
 export type Thread = { id: string; title: string; updatedAt: number; messages: ChatMessage[] };
 type State = { txs: Transaction[]; threads: Thread[] };
@@ -12,7 +12,7 @@ const EMPTY: State = { txs: [], threads: [] };
 export const welcome = (): ChatMessage[] => [
   {
     id: uid(), role: "assistant",
-    text: "Olá! 👋 Sou o **FINLIY**, seu assistente de inteligência financeira e empresarial.\n\n📎 **Comece enviando seus arquivos** (Excel, CSV, PDF ou fotos de comprovantes) pelo botão de upload — eu leio, extraio e lanço tudo automaticamente na tabela, DRE, métricas e gráficos.\n\nVocê também pode registrar pelo chat (ex.: *\"vendi 500 reais em produtos de pet\"*) ou pedir *\"Mostre a tabela de DRE\"*.",
+    text: "Olá! 👋 Sou o **FINLIY**, seu assistente de inteligência financeira e empresarial.\n\n📎 **Comece enviando seus arquivos** (Excel, CSV, PDF ou fotos de comprovantes) pelo botão de upload — eu leio, extraio e salvo tudo na sua base financeira.\n\nDepois, peça no chat para ver tabelas, DRE, métricas ou gráficos com esses dados reais. Você também pode registrar pelo chat, por exemplo: *\"vendi 500 reais em produtos de pet\"*.",
   },
 ];
 
@@ -21,11 +21,24 @@ function read(): State {
   if (typeof window === "undefined") return EMPTY;
   try {
     const raw = localStorage.getItem(KEY);
-    state = raw ? JSON.parse(raw) : { txs: seedTransactions, threads: [] };
+    state = raw ? JSON.parse(raw) : { txs: [], threads: [] };
+    if (state) {
+      const legacyExamples = new Set([
+        "2026-07-01|Saldo inicial", "2026-07-02|Venda de produtos pet", "2026-07-03|Pagamento de fornecedores (ração pet)",
+        "2026-07-04|Conta de energia", "2026-07-05|Recebimento de cliente", "2026-07-06|Folha de pagamento",
+        "2026-07-07|Compra de materiais (acessórios)", "2026-07-08|Venda de serviços", "2026-07-09|Internet e telefone",
+        "2026-07-10|Manutenção de equipamentos", "2026-07-11|Venda de acessórios", "2026-07-12|Anúncios no Instagram",
+      ]);
+      const txs = state.txs.filter((transaction) => !legacyExamples.has(`${transaction.date}|${transaction.description}`));
+      if (txs.length !== state.txs.length) {
+        state = { ...state, txs };
+        localStorage.setItem(KEY, JSON.stringify(state));
+      }
+    }
   } catch {
-    state = { txs: seedTransactions, threads: [] };
+    state = { txs: [], threads: [] };
   }
-  return state!;
+  return state ?? EMPTY;
 }
 function write(next: State) {
   state = next;
