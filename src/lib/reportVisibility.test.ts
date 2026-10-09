@@ -7,6 +7,7 @@ test("metrics require an explicit request", () => {
   expect(isExplicitReportRequest("Quero ver minhas métricas")).toBe(true);
   expect(isExplicitReportRequest("Quero melhorar minha margem")).toBe(false);
   expect(isExplicitReportRequest("Minha margem está baixa")).toBe(false);
+  expect(isExplicitReportRequest("Mostre opções de embalagem")).toBe(false);
 });
 test("DRE and charts require an explicit request rather than a transaction or upload", () => {
   expect(isExplicitReportRequest("Gere o DRE")).toBe(true);
