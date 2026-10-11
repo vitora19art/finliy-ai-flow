@@ -14,3 +14,4 @@
 - Each financial-table message owns its export target so older messages export the correct table.
 - Gate structured report rendering with the shared report-request predicate, including historical messages, so uploads and entries never open reports implicitly.
 - Apply the persisted theme to the document root and define dark overrides as semantic CSS tokens so menus, reports, charts and exports share one palette.
+- Demo data seeds the store only on first open and the first real entry (upload or chat) replaces it entirely, so reports never mix fictitious and real figures.
