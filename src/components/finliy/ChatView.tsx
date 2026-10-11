@@ -92,7 +92,7 @@ async function extractWithAI(f: File, text?: string): Promise<{ transactions: Tr
 
 export default function ChatView({ threadId }: { threadId: string }) {
   const navigate = useNavigate();
-  const { txs, threads } = useDB();
+  const { txs, threads, demo } = useDB();
   const thread = threads.find((t) => t.id === threadId);
   const messages = thread?.messages ?? [];
   const [input, setInput] = useState("");
