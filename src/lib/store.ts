@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from "react";
 import { uid, type ChatMessage, type Transaction } from "./finliy";
+import { demoTransactions } from "./demoData";
 
 export type Thread = { id: string; title: string; updatedAt: number; messages: ChatMessage[] };
-type State = { txs: Transaction[]; threads: Thread[] };
+type State = { txs: Transaction[]; threads: Thread[]; demo?: boolean };
 
 const KEY = "finliy:db:v3";
 const listeners = new Set<() => void>();
@@ -21,7 +22,8 @@ function read(): State {
   if (typeof window === "undefined") return EMPTY;
   try {
     const raw = localStorage.getItem(KEY);
-    state = raw ? JSON.parse(raw) : { txs: [], threads: [] };
+    state = raw ? JSON.parse(raw) : { txs: demoTransactions(), threads: [], demo: true };
+    if (!raw) localStorage.setItem(KEY, JSON.stringify(state));
     if (state) {
       const legacyExamples = new Set([
         "2026-07-01|Saldo inicial", "2026-07-02|Venda de produtos pet", "2026-07-03|Pagamento de fornecedores (ração pet)",
@@ -54,8 +56,10 @@ export const getDB = read;
 
 export const db = {
   addTxs(t: Transaction[]) { const s = read(); write({ ...s, txs: [...s.txs, ...t] }); },
+  /** Dados reais substituem a demonstração na primeira entrada. */
+  addRealTxs(t: Transaction[]) { const s = read(); write({ ...s, demo: false, txs: s.demo ? [...t] : [...s.txs, ...t] }); },
   removeTx(id: string) { const s = read(); write({ ...s, txs: s.txs.filter((t) => t.id !== id) }); },
-  clearTxs() { const s = read(); write({ ...s, txs: [] }); },
+  clearTxs() { const s = read(); write({ ...s, txs: [], demo: false }); },
   createThread(): string {
     const s = read();
     const t: Thread = { id: uid(), title: "Novo chat", updatedAt: Date.now(), messages: welcome() };

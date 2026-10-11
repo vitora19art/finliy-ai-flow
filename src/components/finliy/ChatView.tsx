@@ -92,7 +92,7 @@ async function extractWithAI(f: File, text?: string): Promise<{ transactions: Tr
 
 export default function ChatView({ threadId }: { threadId: string }) {
   const navigate = useNavigate();
-  const { txs, threads } = useDB();
+  const { txs, threads, demo } = useDB();
   const thread = threads.find((t) => t.id === threadId);
   const messages = thread?.messages ?? [];
   const [input, setInput] = useState("");
@@ -118,7 +118,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
     if (isTransactionMessage(text)) {
       const tx = transactionFromMessage(text);
       if (!tx) return { id: uid(), role: "assistant", text: "Não consegui identificar um valor válido. Informe o valor, por exemplo: *\"comprei 200 reais de embalagem\"*." };
-      db.addTxs([tx]);
+      db.addRealTxs([tx]);
       return {
         id: uid(), role: "assistant",
         text: `Pronto! Registrei ${tx.type === "Receita" ? "uma entrada" : "uma saída"} de **${brl(tx.amount)}** em **${tx.category}**, em ${fmtDate(tx.date)}. Suas métricas, DRE e gráficos já foram atualizados.`,
@@ -135,7 +135,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
     const ctrl = new AbortController();
     setAborter(ctrl);
     const cur = getDB();
-    const context = aiContext(computeMetrics(cur.txs), cur.txs);
+    const context = (cur.demo ? "ATENÇÃO: dados de DEMONSTRAÇÃO de uma empresa fictícia; avise o usuário quando citar valores.\n" : "") + aiContext(computeMetrics(cur.txs), cur.txs);
     const msgs = history.filter((m) => m.text && m.block !== "file").map((m) => ({ role: m.role, content: m.text.slice(0, 6000) }));
     let acc = "";
     try {
@@ -245,7 +245,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
           patch(statusId, `Li o arquivo **${f.name}**, mas não encontrei movimentações financeiras. ${result.summary}`);
           continue;
         }
-        db.addTxs(result.transactions);
+        db.addRealTxs(result.transactions);
         const inc = result.transactions.filter((t) => t.type === "Receita").reduce((s, t) => s + t.amount, 0);
         const out = result.transactions.filter((t) => t.type === "Despesa").reduce((s, t) => s + t.amount, 0);
         db.updateMessages(threadId, (x) => x.map((m) => m.id === statusId ? {
@@ -390,7 +390,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
                         <div className="flex gap-2 pl-2">
                            <Button className="rounded-full bg-action px-4 py-2 text-sm font-bold text-action-foreground" onClick={() => {
                              if (!m.pending) return;
-                             db.addTxs([m.pending]);
+                             db.addRealTxs([m.pending]);
                             db.updateMessages(threadId, (x) => x.map((y) => y.id === m.id ? { ...y, status: "confirmed" } : y));
                            }}>Confirmar e registrar</Button>
                           <button className="rounded-full border border-border px-4 py-2 text-sm font-bold" onClick={() =>
@@ -426,6 +426,11 @@ export default function ChatView({ threadId }: { threadId: string }) {
 
           <div className="shrink-0 border-t border-border bg-card px-3 py-3 sm:px-8">
             <div className="mx-auto max-w-5xl space-y-3">
+              {demo && (
+                <p role="note" className="text-xs text-muted-foreground">
+                  ℹ️ Você está usando dados de demonstração. <button onClick={() => setUploadOpen(true)} className="font-semibold text-foreground underline underline-offset-2">Faça upload da sua planilha/nota fiscal</button> a qualquer momento para atualizar os relatórios.
+                </p>
+              )}
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 <button onClick={() => setUploadOpen(true)} disabled={busy} title="Enviar arquivos (Excel, CSV, PDF, comprovantes)" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50">
                   <FileText className="size-5" /> Enviar arquivos
