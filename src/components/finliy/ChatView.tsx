@@ -135,7 +135,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
     const ctrl = new AbortController();
     setAborter(ctrl);
     const cur = getDB();
-    const context = aiContext(computeMetrics(cur.txs), cur.txs);
+    const context = (cur.demo ? "ATENÇÃO: dados de DEMONSTRAÇÃO de uma empresa fictícia; avise o usuário quando citar valores.\n" : "") + aiContext(computeMetrics(cur.txs), cur.txs);
     const msgs = history.filter((m) => m.text && m.block !== "file").map((m) => ({ role: m.role, content: m.text.slice(0, 6000) }));
     let acc = "";
     try {
