@@ -23,12 +23,9 @@ import { FinancialMessage } from "./FinancialMessage";
 import { Button } from "@/components/ui/button";
 
 const SUGGESTIONS = [
-  "Mostre a tabela de DRE",
-  "Gere um gráfico do faturamento por período",
-  "Mostre as métricas financeiras",
-  "Gráfico de pizza das despesas",
-  "Mostre o gráfico de margem por produto",
-  "Como posso cortar custos?",
+  { label: "📊 Gráficos Interativos", command: "Gere um gráfico do faturamento por período" },
+  { label: "📋 Tabela DRE", command: "Mostre a tabela de DRE" },
+  { label: "💰 Métricas", command: "Mostre as métricas financeiras" },
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -436,8 +433,8 @@ export default function ChatView({ threadId }: { threadId: string }) {
                   <FileText className="size-5" /> Enviar arquivos
                 </button>
                 {SUGGESTIONS.map((s) => (
-                  <button key={s} onClick={() => send(s)} disabled={busy} className="shrink-0 rounded-full bg-muted px-4 py-2 text-xs font-semibold ring-1 ring-border hover:bg-accent disabled:opacity-50">
-                    {s}
+                  <button key={s.label} onClick={() => send(s.command)} disabled={busy} className="shrink-0 rounded-full bg-muted px-4 py-2 text-xs font-semibold ring-1 ring-border hover:bg-accent disabled:opacity-50">
+                    {s.label}
                   </button>
                 ))}
               </div>

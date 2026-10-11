@@ -31,7 +31,7 @@ export type ChatMessage = {
 
 export type ChartKind = "faturamento" | "compras" | "comparativo" | "despesas-pizza" | "saldo-linha" | "margem-produto";
 
-export const uid = () => Math.random().toString(36).slice(2, 10);
+export const uid = () => crypto.randomUUID().slice(0, 8);
 
 export const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

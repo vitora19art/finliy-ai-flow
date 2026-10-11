@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { uid, type ChatMessage, type Transaction } from "./finliy";
-import { demoTransactions } from "./demoData";
+import { demoTransactions } from "@/data/demoData";
 
 export type Thread = { id: string; title: string; updatedAt: number; messages: ChatMessage[] };
 type State = { txs: Transaction[]; threads: Thread[]; demo?: boolean };

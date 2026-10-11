@@ -1,4 +1,4 @@
-import { uid, type Transaction } from "./finliy";
+import { uid, type Transaction } from "@/lib/finliy";
 
 /** Empresa fictícia usada apenas até o primeiro lançamento/arquivo real. */
 const rows: [string, string, string, Transaction["type"], number, string?][] = [
