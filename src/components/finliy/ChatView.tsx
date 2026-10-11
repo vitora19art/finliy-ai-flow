@@ -118,7 +118,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
     if (isTransactionMessage(text)) {
       const tx = transactionFromMessage(text);
       if (!tx) return { id: uid(), role: "assistant", text: "Não consegui identificar um valor válido. Informe o valor, por exemplo: *\"comprei 200 reais de embalagem\"*." };
-      db.addTxs([tx]);
+      db.addRealTxs([tx]);
       return {
         id: uid(), role: "assistant",
         text: `Pronto! Registrei ${tx.type === "Receita" ? "uma entrada" : "uma saída"} de **${brl(tx.amount)}** em **${tx.category}**, em ${fmtDate(tx.date)}. Suas métricas, DRE e gráficos já foram atualizados.`,
@@ -245,7 +245,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
           patch(statusId, `Li o arquivo **${f.name}**, mas não encontrei movimentações financeiras. ${result.summary}`);
           continue;
         }
-        db.addTxs(result.transactions);
+        db.addRealTxs(result.transactions);
         const inc = result.transactions.filter((t) => t.type === "Receita").reduce((s, t) => s + t.amount, 0);
         const out = result.transactions.filter((t) => t.type === "Despesa").reduce((s, t) => s + t.amount, 0);
         db.updateMessages(threadId, (x) => x.map((m) => m.id === statusId ? {
@@ -390,7 +390,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
                         <div className="flex gap-2 pl-2">
                            <Button className="rounded-full bg-action px-4 py-2 text-sm font-bold text-action-foreground" onClick={() => {
                              if (!m.pending) return;
-                             db.addTxs([m.pending]);
+                             db.addRealTxs([m.pending]);
                             db.updateMessages(threadId, (x) => x.map((y) => y.id === m.id ? { ...y, status: "confirmed" } : y));
                            }}>Confirmar e registrar</Button>
                           <button className="rounded-full border border-border px-4 py-2 text-sm font-bold" onClick={() =>
