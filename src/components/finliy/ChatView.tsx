@@ -426,6 +426,11 @@ export default function ChatView({ threadId }: { threadId: string }) {
 
           <div className="shrink-0 border-t border-border bg-card px-3 py-3 sm:px-8">
             <div className="mx-auto max-w-5xl space-y-3">
+              {demo && (
+                <p role="note" className="text-xs text-muted-foreground">
+                  ℹ️ Você está usando dados de demonstração. <button onClick={() => setUploadOpen(true)} className="font-semibold text-foreground underline underline-offset-2">Faça upload da sua planilha/nota fiscal</button> a qualquer momento para atualizar os relatórios.
+                </p>
+              )}
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 <button onClick={() => setUploadOpen(true)} disabled={busy} title="Enviar arquivos (Excel, CSV, PDF, comprovantes)" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50">
                   <FileText className="size-5" /> Enviar arquivos
