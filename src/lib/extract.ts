@@ -43,7 +43,7 @@ export async function extractWithAI(
   apiKey?: string,
 ): Promise<{ transactions: Transaction[]; summary: string }> {
   if (!apiKey) {
-    return { transactions: [], summary: "Leitura por IA não configurada. Use planilhas Excel/CSV (lidas automaticamente) ou adicione a chave de API." };
+    return { transactions: [], summary: "Use planilhas Excel (.xlsx) ou CSV para importação automática. Para PDF e imagens, envie também uma planilha com os mesmos dados para garantir a leitura." };
   }
 
   const today = new Date().toISOString().slice(0, 10);

@@ -3,17 +3,17 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import {
   Check, Copy, FileText, Menu, Mic, Pencil, Plus, RefreshCw, SendHorizontal,
-  Square, Trash2, UserCircle2, X, Paperclip, MessageSquare, Loader2,
+  Trash2, UserCircle2, X, Paperclip, MessageSquare, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   type ChartKind, type ChatMessage, type Transaction,
   brl, fmtDate, fmtSize, isTransactionMessage, isCalculationRequest, transactionFromMessage, uid,
 } from "@/lib/finliy";
-import { aiContext, computeMetrics } from "@/lib/metrics";
+import { computeMetrics } from "@/lib/metrics";
 import { importTransactionsFromXlsx, sheetToText } from "@/lib/importXlsx";
-import { streamChat } from "@/lib/ai";
 import { extractWithAI } from "@/lib/extract";
+import { generateLocalResponse } from "@/lib/localAI";
 import { db, getDB, useDB } from "@/lib/store";
 import { FinanceTable, withBalance } from "./Tables";
 import { UploadModal } from "./Modals";
@@ -60,8 +60,6 @@ function previousUserText(messages: ChatMessage[], beforeIndex: number) {
   return "";
 }
 
-const AI_KEY = (import.meta.env.VITE_LOVABLE_API_KEY as string | undefined) ?? "";
-
 export default function ChatView({ threadId }: { threadId: string }) {
   const navigate = useNavigate();
   const { txs, threads, demo } = useDB();
@@ -73,7 +71,6 @@ export default function ChatView({ threadId }: { threadId: string }) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [editing, setEditing] = useState<{ id: string; title: string } | null>(null);
-  const [aborter, setAborter] = useState<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -101,34 +98,19 @@ export default function ChatView({ threadId }: { threadId: string }) {
     return { id: uid(), role: "assistant", ...rep, text: getDB().txs.length === 0 ? "" : rep.text };
   }
 
-  async function aiResponse(history: ChatMessage[]) {
-    const id = uid();
-    push({ id, role: "assistant", text: "" });
-    const ctrl = new AbortController();
-    setAborter(ctrl);
+  async function smartResponse(text: string) {
     const cur = getDB();
-    const context = (cur.demo ? "ATENÇÃO: dados de DEMONSTRAÇÃO de uma empresa fictícia; avise o usuário quando citar valores.\n" : "") + aiContext(computeMetrics(cur.txs), cur.txs);
-    const msgs = history.filter((m) => m.text && m.block !== "file").map((m) => ({ role: m.role, content: m.text.slice(0, 6000) }));
-    let acc = "";
-    try {
-      for await (const ev of streamChat(context.slice(0, 8000), msgs, AI_KEY, ctrl.signal)) {
-        if (ev.type === "delta") { acc += ev.text; patch(id, acc); }
-        else if (ev.type === "error") { patch(id, acc ? `${acc}\n\n⚠️ ${ev.message}` : `⚠️ ${ev.message}`); return; }
-      }
-      if (!acc) patch(id, "⚠️ Não recebi uma resposta. Tente novamente.");
-    } catch (e) {
-      if ((e as Error).name === "AbortError") patch(id, acc || "_(resposta interrompida)_");
-      else patch(id, "⚠️ Falha de conexão com a IA. Tente novamente.");
-    } finally {
-      setAborter(null);
-    }
+    const m = computeMetrics(cur.txs);
+    const reply = generateLocalResponse(text, m, cur.txs, !!cur.demo);
+    await new Promise((r) => setTimeout(r, 450));
+    push({ id: uid(), role: "assistant", text: reply });
   }
 
-  async function run(text: string, history: ChatMessage[]) {
+  async function run(text: string) {
     setBusy(true);
     const local = localResponse(text);
     if (local) { await new Promise((r) => setTimeout(r, 350)); push(local); }
-    else await aiResponse(history);
+    else await smartResponse(text);
     setBusy(false);
   }
 
@@ -138,7 +120,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
     const userMsg: ChatMessage = { id: uid(), role: "user", text: v };
     push(userMsg);
     setInput("");
-    run(v, [...messages, userMsg]);
+    run(v);
   }
 
   function redo(idx: number) {
@@ -150,7 +132,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
     db.updateMessages(threadId, (x) => x.filter((_, i) => i !== idx));
     if (isTransactionMessage(prev.text)) { push({ id: uid(), role: "assistant", text: "O lançamento já está registrado na sua base financeira." }); return; }
     if (target?.block) { push({ ...target, id: uid() }); return; }
-    run(prev.text, before);
+    run(prev.text);
   }
 
   function financeRows(): (string | number)[][] {
@@ -180,9 +162,9 @@ export default function ChatView({ threadId }: { threadId: string }) {
         let result: { transactions: Transaction[]; summary: string } = { transactions: [], summary: "" };
         if (ext === "xlsx" || ext === "csv") {
           const direct = await importTransactionsFromXlsx(f);
-          result = direct.length ? { transactions: direct, summary: "Planilha importada pelas colunas identificadas." } : await extractWithAI(f, await sheetToText(f), AI_KEY);
+          result = direct.length ? { transactions: direct, summary: "Planilha importada pelas colunas identificadas." } : await extractWithAI(f, await sheetToText(f));
         } else if (["pdf", "jpg", "jpeg", "png"].includes(ext)) {
-          result = await extractWithAI(f, undefined, AI_KEY);
+          result = await extractWithAI(f);
         } else {
           patch(statusId, `Recebi **${f.name}** (${fmtSize(f.size)}) e ele ficou anexado à conversa. Para a leitura automática, envie o conteúdo em **PDF, Excel (.xlsx), CSV ou imagem** — arquivos ${ext.toUpperCase()} ainda não são lidos automaticamente nesta versão Beta.`);
           continue;
@@ -399,15 +381,9 @@ export default function ChatView({ threadId }: { threadId: string }) {
                 <button type="button" onClick={voice} aria-label="Falar" className={`grid size-10 place-items-center rounded-full text-primary-foreground ${listening ? "bg-expense" : "hover:bg-primary-foreground/10"}`}>
                   <Mic className="size-6" />
                 </button>
-                {aborter ? (
-                  <button type="button" onClick={() => aborter.abort()} aria-label="Parar" className="grid size-10 place-items-center rounded-full bg-brand text-brand-foreground">
-                    <Square className="size-4" />
-                  </button>
-                ) : (
-                  <button type="submit" disabled={!input.trim() || busy} aria-label="Enviar" className="grid size-10 place-items-center rounded-full bg-brand text-brand-foreground disabled:opacity-40">
-                    <SendHorizontal className="size-5" />
-                  </button>
-                )}
+                <button type="submit" disabled={!input.trim() || busy} aria-label="Enviar" className="grid size-10 place-items-center rounded-full bg-brand text-brand-foreground disabled:opacity-40">
+                  <SendHorizontal className="size-5" />
+                </button>
               </form>
             </div>
           </div>
