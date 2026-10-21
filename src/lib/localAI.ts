@@ -1,165 +1,137 @@
 import { type Metrics } from "./metrics";
-import { brl, fmtDate, type Transaction } from "./finliy";
+import { brl, type Transaction } from "./finliy";
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 type Topic =
-  | "faturamento" | "margem" | "lucro" | "dre" | "despesas"
-  | "cmv" | "compras" | "saldo" | "ticket" | "produto"
-  | "comparativo" | "caixa" | "impostos" | "marketing"
-  | "folha" | "aluguel" | "categoria" | "crescimento"
-  | "sugestao" | "consultoria" | "saudacao" | "agradecimento" | "geral";
+  | "faturamento" | "margem" | "lucro" | "dre" | "despesas" | "cmv" | "compras"
+  | "saldo" | "ticket" | "produto" | "comparativo" | "impostos" | "marketing"
+  | "folha" | "aluguel" | "categoria" | "crescimento" | "numero" | "consultoria"
+  | "saudacao" | "agradecimento" | "geral";
 
 function detectTopic(text: string): Topic {
   const t = norm(text);
-  if (/(ola|oi|bom dia|boa tarde|boa noite|hey|ola)/.test(t)) return "saudacao";
+  if (/(ola|oi|bom dia|boa tarde|boa noite|hey)\b/.test(t)) return "saudacao";
   if (/(obrigad|valeu|agradec|perfeito|otimo|excelente)/.test(t)) return "agradecimento";
-  if (/\bdre\b|demonstrativo.*resultado|resultado.*liquido/.test(t)) return "dre";
+  if (/\b(dre)\b|demonstrativo.*resultado|resultado.*liquido/.test(t)) return "dre";
+  if (/(dica|conselho|feedback|diagnost|como melhorar|como economizar|reduz|economiz|estrateg|precific|onde.*gast|melhorar.*margem|o que.*fazer|recomend)/.test(t)) return "consultoria";
+  if (/(quanto.*(gastei|gasto|despesa|paguei)|maior despesa|qual.*maior.*gasto|onde.*estou.*gastando)/.test(t)) return "numero";
   if (/faturamento|receita.*total|receita.*bruta|venda.*total/.test(t)) return "faturamento";
   if (/margem.*lucro|lucro.*liquido|lucro.*bruto|rentabilidade/.test(t)) return "lucro";
   if (/margem\b(?!.*produto)/.test(t)) return "margem";
   if (/margem.*produto|produto.*margem|analise.*margem|margem.*bruta.*produto/.test(t)) return "produto";
   if (/cmv|custo.*mercadoria|custo variavel|custo.*aquisicao/.test(t)) return "cmv";
   if (/compra|fornecedor|estoque|insumo|materia.?prima/.test(t)) return "compras";
-  if (/despesa|gasto|custo operacional/.test(t)) return "despesas";
   if (/saldo|caixa|fluxo.*caixa|dinheiro.*caixa/.test(t)) return "saldo";
   if (/ticket.*medio|ticket/.test(t)) return "ticket";
-  if (/comparativo|comparar|versus|\bvs\b|\bx\b|faturamento.*compra/.test(t)) return "comparativo";
+  if (/comparativo|comparar|versus|\bvs\b|faturamento.*compra/.test(t)) return "comparativo";
   if (/imposto|tributo|das|simples/.test(t)) return "impostos";
   if (/marketing|anuncio|propaganda|redes.*social/.test(t)) return "marketing";
   if (/folha|salario|funcionario|pessoal/.test(t)) return "folha";
   if (/aluguel|loja|espaco/.test(t)) return "aluguel";
-  if (/categoria|tipo.*despesa|onde.*gastei|gasto.*por/.test(t)) return "categoria";
+  if (/categoria|tipo.*despesa|gasto.*por/.test(t)) return "categoria";
   if (/crescimento|evolucao|tendencia|aumento|subiu|caiu|variacao/.test(t)) return "crescimento";
-  if (/analise|consultoria|resumo executivo|como melhorar|melhorar a margem/.test(t)) return "consultoria";
-  if (/sugest|recomend|conselho|dica|o que.*fazer|melhorar|acao/.test(t)) return "sugestao";
   return "geral";
 }
 
 function topExpenseCategories(m: Metrics): string {
   const sorted = [...m.despesasPorCategoria].sort((a, b) => b.value - a.value).slice(0, 3);
-  if (!sorted.length) return "Sem despesas registradas.";
-  return sorted.map((c, i) => `${i + 1}º ${c.name}: ${brl(c.value)}`).join(" · ");
+  return sorted.length ? sorted.map((c, i) => `${i + 1}º ${c.name}: ${brl(c.value)}`).join(" · ") : "Nenhuma despesa registrada.";
 }
 
 function productSummary(m: Metrics): string {
-  if (!m.produtos.length) return "Não há produtos cadastrados ainda.";
-  return m.produtos.map((p) =>
-    `**${p.produto}** — Receita: ${brl(p.receita)}, CMV: ${brl(p.custo)}, Lucro: ${brl(p.lucro)}, Margem: ${m.fmt.pct(p.margem)}`
-  ).join("\n");
+  if (!m.produtos.length) return "Ainda não há produtos identificados nos lançamentos.";
+  return m.produtos.map((p) => `**${p.produto}** — receita ${brl(p.receita)}, CMV ${brl(p.custo)}, lucro ${brl(p.lucro)}, margem ${m.fmt.pct(p.margem)}`).join("\n");
+}
+
+function matchingExpense(text: string, m: Metrics): { name: string; value: number } | undefined {
+  const words = norm(text).split(/\s+/).filter((word) => word.length > 3 && !["quanto", "gastei", "gasto", "com", "minha", "meu", "despesa", "qual", "foi", "onde", "estou", "muito"].includes(word));
+  return m.despesasPorCategoria.find((expense) => words.some((word) => norm(expense.name).includes(word)));
+}
+
+function consultancy(m: Metrics): string {
+  const top = [...m.despesasPorCategoria].sort((a, b) => b.value - a.value)[0];
+  const cmvRatio = m.receitaLiquida ? (m.cmv / m.receitaLiquida) * 100 : 0;
+  const points: string[] = [];
+  if (cmvRatio > 35) points.push(`**Ponto crítico — CMV:** compras e insumos representam ${m.fmt.pct(cmvRatio)} da receita líquida. Renegocie fornecedores, revise fichas técnicas e acompanhe perdas por produto.`);
+  if (top) points.push(`**Maior pressão no resultado:** ${top.name} soma ${brl(top.value)}. Defina uma meta de redução ou produtividade para essa categoria, sem cortar despesas essenciais sem medir o impacto.`);
+  if (m.margemContribuicao < 50) points.push(`**Precificação e mix:** a margem de contribuição está em ${m.fmt.pct(m.margemContribuicao)}. Priorize itens de maior margem, revise preços e teste combos antes de buscar apenas mais volume.`);
+  if (m.margemLiquida < 10) points.push(`**Resultado final:** a margem líquida está em ${m.fmt.pct(m.margemLiquida)}. Separe despesas fixas essenciais, renegociáveis e discricionárias para um plano de redução de 30 dias.`);
+  if (!points.length) points.push(`Os indicadores estão equilibrados. Preserve a margem de contribuição de ${m.fmt.pct(m.margemContribuicao)} e monitore CMV, preços e despesas por categoria semanalmente.`);
+  return `Analisei os lançamentos atuais e encontrei estes focos de gestão:\n\n${points.map((point, index) => `${index + 1}. ${point}`).join("\n\n")}\n\n**Próximo passo recomendado:** escolha a maior categoria, estabeleça uma meta percentual e compare o resultado no próximo período.`;
 }
 
 export function generateLocalResponse(text: string, m: Metrics, txs: Transaction[], demo: boolean): string {
   const topic = detectTopic(text);
-  const prefix = demo ? "Com base nos dados de demonstração da Cafeteria Aurora" : "Com base nos seus dados financeiros";
+  const context = demo ? "Analisando os dados disponíveis na demonstração" : "Analisando seus dados financeiros";
 
   switch (topic) {
     case "saudacao":
-      return "Olá! 👋 Sou o **FINLIY**, seu assistente financeiro. Posso analisar seu faturamento, margens, DRE, despesas e muito mais. Experimente clicar nos atalhos abaixo (DRE, Gráficos de Despesas, Análise de Margem) ou pergunte qualquer coisa sobre suas finanças!";
-
+      return "Olá! Sou o assistente financeiro do FINLIY. Como posso ajudar você a entender seus números hoje? Posso investigar despesas, margens, preços, caixa ou preparar uma DRE quando você pedir.";
     case "agradecimento":
-      return "De nada! Estou aqui para ajudar sempre que precisar. Que tal ver a **DRE simplificada** ou os **gráficos de despesas**? Use os atalhos abaixo para acessar rapidamente.";
-
+      return "Fico feliz em ajudar. Se quiser continuar, posso investigar uma despesa específica, comparar períodos ou sugerir ações para melhorar sua margem.";
+    case "consultoria":
+      return consultancy(m);
+    case "numero": {
+      const match = matchingExpense(text, m);
+      if (match) return `${context}, você gastou **${brl(match.value)}** com **${match.name}**. Essa categoria representa ${m.receitaBruta ? m.fmt.pct((match.value / m.receitaBruta) * 100) : "0%"} do faturamento.`;
+      const largest = [...m.despesasPorCategoria].sort((a, b) => b.value - a.value)[0];
+      return largest ? `A maior despesa identificada é **${largest.name}**, com **${brl(largest.value)}**. Ela corresponde a ${m.receitaBruta ? m.fmt.pct((largest.value / m.receitaBruta) * 100) : "0%"} do faturamento.` : "Ainda não encontrei despesas registradas para responder a essa pergunta.";
+    }
     case "dre":
-      return `${prefix}, este é o resumo da sua **DRE Simplificada**:\n\n• **Receita Bruta:** ${brl(m.receitaBruta)}\n• **(-) Deduções:** ${brl(m.deducoes)}\n• **(=) Receita Líquida:** ${brl(m.receitaLiquida)}\n• **(-) Custos / CMV:** ${brl(m.cmv)}\n• **(=) Lucro Bruto:** ${brl(m.lucroBruto)}\n• **(-) Despesas Operacionais:** ${brl(m.despesasOperacionais)}\n• **(=) Resultado Líquido:** ${brl(m.resultadoLiquido)}\n\nA **margem bruta** é de ${m.fmt.pct(m.margemBruta)} e a **margem líquida** de ${m.fmt.pct(m.margemLiquida)}. Para ver a tabela completa, peça **DRE robusta** ou use o atalho de DRE.`;
-
+      return `${context}, a DRE simplificada apresenta Receita Bruta de **${brl(m.receitaBruta)}**, Deduções de **${brl(m.deducoes)}**, Receita Líquida de **${brl(m.receitaLiquida)}**, CMV de **${brl(m.cmv)}**, Lucro Bruto de **${brl(m.lucroBruto)}**, Despesas Operacionais de **${brl(m.despesasOperacionais)}** e Resultado Líquido de **${brl(m.resultadoLiquido)}**.`;
     case "faturamento":
-      return `${prefix}, seu **faturamento total** é de **${brl(m.faturamentoTotal)}**, distribuído em **${m.vendasCount} vendas/recebimentos**, com um **ticket médio** de ${brl(m.ticketMedio)}.\n\nQuer ver o faturamento em gráfico? Clique em **Gráficos de Despesas** ou peça "mostre o gráfico de faturamento".`;
-
+      return `${context}, o faturamento é **${brl(m.faturamentoTotal)}**, em ${m.vendasCount} vendas, com ticket médio de **${brl(m.ticketMedio)}**. Se quiser, peça explicitamente para ver o gráfico de faturamento.`;
     case "lucro":
-      return `${prefix}:\n\n• **Lucro Bruto:** ${brl(m.lucroBruto)} (margem bruta de ${m.fmt.pct(m.margemBruta)})\n• **Resultado Líquido:** ${brl(m.resultadoLiquido)} (margem líquida de ${m.fmt.pct(m.margemLiquida)})\n\nO lucro bruto representa o que sobra após deduzir o CMV. O resultado líquido já considera todas as despesas operacionais. Para o detalhamento completo, clique em **DRE Simplificada**.`;
-
+      return `${context}, o Lucro Bruto é **${brl(m.lucroBruto)}**, com margem de ${m.fmt.pct(m.margemBruta)}, e o Resultado Líquido é **${brl(m.resultadoLiquido)}**, com margem de ${m.fmt.pct(m.margemLiquida)}.`;
     case "margem":
-      return `${prefix}, sua **margem bruta** é de **${m.fmt.pct(m.margemBruta)}** e a **margem líquida** de **${m.fmt.pct(m.margemLiquida)}**.\n\nA margem bruta mostra quanto sobra de cada real após o custo das mercadorias. A margem líquida considera também as despesas operacionais. Quer ver a margem por produto? Clique em **Análise de Margem**.`;
-
+      return `${context}, a margem bruta está em **${m.fmt.pct(m.margemBruta)}** e a margem líquida em **${m.fmt.pct(m.margemLiquida)}**. A margem de contribuição está em ${m.fmt.pct(m.margemContribuicao)}.`;
     case "produto": {
       const top = m.maiorMargem;
       const low = m.menorMargem;
-      return `${prefix}, aqui está a análise de margem por produto:\n\n${productSummary(m)}\n\n${top ? `Melhor margem: **${top.produto}** (${m.fmt.pct(top.margem)}).` : ""}${low && low !== top ? ` Pior margem: **${low.produto}** (${m.fmt.pct(low.margem)}).` : ""}\n\nPara ver o gráfico completo, clique em **Análise de Margem** nos atalhos.`;
+      return `${context}, estas são as margens por produto:\n\n${productSummary(m)}\n\n${top ? `Melhor margem: **${top.produto}** (${m.fmt.pct(top.margem)}).` : ""}${low && low !== top ? ` Menor margem: **${low.produto}** (${m.fmt.pct(low.margem)}).` : ""}`;
     }
-
     case "cmv":
-      return `${prefix}, seu **CMV (Custo das Mercadorias Vendidas)** é de **${brl(m.cmv)}**, representando ${m.receitaBruta ? m.fmt.pct((m.cmv / m.receitaBruta) * 100) : "—"} da receita bruta.\n\nIsso significa que ${m.receitaBruta ? m.fmt.pct(m.margemBruta) : "—"} de cada real vendido sobra como lucro bruto antes das despesas operacionais.`;
-
+      return `${context}, o CMV é **${brl(m.cmv)}**, equivalente a ${m.receitaLiquida ? m.fmt.pct((m.cmv / m.receitaLiquida) * 100) : "0%"} da receita líquida. Esse é o principal indicador para acompanhar custo de insumos e margem bruta.`;
     case "compras":
-      return `${prefix}, o **total de compras** (matéria-prima/insumos) é de **${brl(m.totalCompras)}**.\n\nEsses valores compõem o seu CMV e impactam diretamente a margem bruta. Use o atalho **Análise de Margem** para ver quanto cada produto custa versus quanto gera.`;
-
+      return `${context}, as compras totalizam **${brl(m.totalCompras)}** e compõem o CMV. Vale acompanhar o custo por produto e renegociar os itens de maior impacto.`;
     case "despesas":
-      return `${prefix}, suas **despesas operacionais** totalizam **${brl(m.despesasOperacionais)}**.\n\nPrincipais categorias: ${topExpenseCategories(m)}\n\nPara ver a distribuição completa em gráfico de pizza, clique em **Gráficos de Despesas** nos atalhos.`;
-
+      return `${context}, as despesas operacionais somam **${brl(m.despesasOperacionais)}**. As maiores categorias são: ${topExpenseCategories(m)}.`;
     case "saldo": {
       const last = m.saldo[m.saldo.length - 1];
-      return `${prefix}, seu **saldo de caixa atual** é de **${last ? brl(last.Saldo) : brl(0)}**.\n\nO saldo acumula todas as entradas e saídas registradas. Para ver a evolução do saldo ao longo do tempo, peça "mostre o gráfico de evolução do saldo".`;
+      return `${context}, o saldo acumulado mais recente é **${brl(last?.Saldo ?? 0)}**. Para visualizar a evolução, peça explicitamente o gráfico de saldo.`;
     }
-
     case "ticket":
-      return `${prefix}, seu **ticket médio** é de **${brl(m.ticketMedio)}**, calculado sobre ${m.vendasCount} vendas/recebimentos.\n\nUm ticket médio mais alto geralmente indica maior valor agregado por venda. Para melhorar, considere combos ou upsell de produtos com maior margem.`;
-
+      return `${context}, o ticket médio é **${brl(m.ticketMedio)}**. Combos e ofertas de itens com maior margem podem elevar esse valor sem depender apenas de mais vendas.`;
     case "comparativo":
-      return `${prefix}, comparando faturamento e compras:\n\n• **Faturamento:** ${brl(m.receitaBruta)}\n• **Compras (CMV):** ${brl(m.cmv)}\n• **Diferença (lucro bruto):** ${brl(m.lucroBruto)}\n\nO faturamento é ${m.cmv ? `${(m.receitaBruta / m.cmv).toFixed(1)}x maior` : "infinitamente maior"} que o custo das mercadorias. Peça "mostre o gráfico comparativo" para visualizar as barras lado a lado.`;
-
+      return `${context}, o faturamento foi de **${brl(m.receitaBruta)}** contra **${brl(m.cmv)}** em compras, deixando **${brl(m.lucroBruto)}** de lucro bruto. Posso mostrar o comparativo em gráfico se você pedir.`;
     case "impostos": {
       const imp = m.despesasPorCategoria.find((d) => /imposto|tributo|das/i.test(d.name));
-      return `${prefix}, ${imp ? `seus impostos totalizam **${brl(imp.value)}** (${m.fmt.pct((imp.value / m.receitaBruta) * 100)} da receita).` : "não há lançamentos de impostos identificados nos dados atuais."}\n\nOs impostos impactam diretamente o resultado líquido da DRE.`;
+      return imp ? `Os impostos identificados somam **${brl(imp.value)}**, equivalentes a ${m.receitaBruta ? m.fmt.pct((imp.value / m.receitaBruta) * 100) : "0%"} do faturamento.` : "Não encontrei lançamentos de impostos nos dados atuais.";
     }
-
     case "marketing": {
-      const mkt = m.despesasPorCategoria.find((d) => /marketing|anuncio/i.test(d.name));
-      return `${prefix}, ${mkt ? `seus gastos com marketing totalizam **${brl(mkt.value)}**, representando ${m.fmt.pct((mkt.value / m.receitaBruta) * 100)} do faturamento.` : "não há gastos de marketing identificados."}\n\nO custo de aquisição por venda é de ${brl(m.custoAquisicao)}. Avalie se o retorno desse investimento está gerando vendas proporcionais.`;
+      const marketing = m.despesasPorCategoria.find((d) => /marketing|anuncio/i.test(d.name));
+      return marketing ? `Você gastou **${brl(marketing.value)}** com marketing, equivalente a ${m.receitaBruta ? m.fmt.pct((marketing.value / m.receitaBruta) * 100) : "0%"} do faturamento. O custo de aquisição médio por venda é ${brl(m.custoAquisicao)}.` : "Não encontrei gastos de marketing nos dados atuais.";
     }
-
     case "folha": {
       const folha = m.despesasPorCategoria.find((d) => /folha|salario/i.test(d.name));
-      return `${prefix}, ${folha ? `a folha de pagamento totaliza **${brl(folha.value)}**, sendo ${m.fmt.pct((folha.value / m.receitaBruta) * 100)} do faturamento.` : "não há lançamentos de folha identificados."}\n\nA folha geralmente é uma das maiores despesas fixas. Monitore essa relação para manter a saúde financeira.`;
+      return folha ? `A folha de pagamento soma **${brl(folha.value)}**, representando ${m.receitaBruta ? m.fmt.pct((folha.value / m.receitaBruta) * 100) : "0%"} do faturamento.` : "Não encontrei lançamentos de folha nos dados atuais.";
     }
-
     case "aluguel": {
       const aluguel = m.despesasPorCategoria.find((d) => /aluguel/i.test(d.name));
-      return `${prefix}, ${aluguel ? `o aluguel totaliza **${brl(aluguel.value)}** mensais (${m.fmt.pct((aluguel.value / m.receitaBruta) * 100)} do faturamento).` : "não há aluguel identificado nos dados."}\n\nCompare esse percentual com o padrão do seu segmento — geralmente recomenda-se manter entre 5% e 10% do faturamento.`;
+      return aluguel ? `O aluguel soma **${brl(aluguel.value)}**, equivalente a ${m.receitaBruta ? m.fmt.pct((aluguel.value / m.receitaBruta) * 100) : "0%"} do faturamento.` : "Não encontrei aluguel nos dados atuais.";
     }
-
     case "categoria":
-      return `${prefix}, suas despesas por categoria:\n\n${[...m.despesasPorCategoria].sort((a, b) => b.value - a.value).map((c) => `• **${c.name}:** ${brl(c.value)}`).join("\n")}\n\nPara visualizar isso em gráfico de pizza, clique em **Gráficos de Despesas** nos atalhos.`;
-
+      return `${context}, as despesas por categoria são:\n\n${[...m.despesasPorCategoria].sort((a, b) => b.value - a.value).map((category) => `• **${category.name}:** ${brl(category.value)}`).join("\n")}`;
     case "crescimento": {
-      const periods = m.porPeriodo.filter((p) => p.Faturamento > 0);
-      if (periods.length < 2) return `${prefix}, não há períodos suficientes para analisar tendência. Continue registrando lançamentos para acompanhar a evolução.`;
+      const periods = m.porPeriodo.filter((period) => period.Faturamento > 0);
+      if (periods.length < 2) return "Ainda não há períodos suficientes com faturamento para identificar uma tendência confiável.";
       const first = periods[0]!.Faturamento;
       const last = periods[periods.length - 1]!.Faturamento;
       const change = first ? ((last - first) / first) * 100 : 0;
-      const direction = change >= 0 ? "crescimento" : "queda";
-      return `${prefix}, comparando o primeiro e o último período com vendas:\n\n• Primeiro período: ${brl(first)}\n• Último período: ${brl(last)}\n• Variação: **${change >= 0 ? "+" : ""}${change.toFixed(1)}%** (${direction})\n\nPara ver a evolução visual, peça "mostre o gráfico de evolução do saldo" ou "gráfico de faturamento".`;
+      return `Entre o primeiro e o último período com vendas, o faturamento variou **${change >= 0 ? "+" : ""}${change.toFixed(1)}%**: de ${brl(first)} para ${brl(last)}.`;
     }
-
-    case "consultoria": {
-      const topExpense = [...m.despesasPorCategoria].sort((a, b) => b.value - a.value)[0];
-      const cmvRatio = m.receitaLiquida ? (m.cmv / m.receitaLiquida) * 100 : 0;
-      const advice: string[] = [];
-      if (cmvRatio > 35) advice.push(`O CMV representa ${m.fmt.pct(cmvRatio)} da receita líquida. Priorize renegociação com fornecedores, ficha técnica e redução de perdas antes de aumentar volume.`);
-      if (m.margemContribuicao < 50) advice.push(`A margem de contribuição está em ${m.fmt.pct(m.margemContribuicao)}. Uma meta inicial é recuperar pontos por meio de preço, mix de produtos e venda de itens com maior margem.`);
-      if (topExpense) advice.push(`A maior despesa é **${topExpense.name}**, com ${brl(topExpense.value)}. Defina uma meta de redução ou produtividade para essa linha e acompanhe mensalmente.`);
-      if (m.margemLiquida < 10) advice.push(`A margem líquida de ${m.fmt.pct(m.margemLiquida)} exige disciplina sobre despesas fixas. Separe custos essenciais, renegociáveis e discricionários para um plano de 30 dias.`);
-      if (!advice.length) advice.push(`Os indicadores estão equilibrados. Preserve a margem de contribuição em ${m.fmt.pct(m.margemContribuicao)} e monitore o CMV e as despesas por categoria toda semana.`);
-      return `${prefix}, aqui está uma análise executiva baseada nos lançamentos atuais:\n\n${advice.map((item, index) => `${index + 1}. ${item}`).join("\n\n")}\n\n**Leitura-chave:** Receita líquida de ${brl(m.receitaLiquida)}, lucro bruto de ${brl(m.lucroBruto)} e EBITDA de ${brl(m.ebitda)}. O próximo foco deve ser transformar a melhoria de margem em uma meta mensurável por categoria.`;
-    }
-
-    case "sugestao": {
-      const sug: string[] = [];
-      if (m.margemBruta < 40) sug.push(`Sua margem bruta (${m.fmt.pct(m.margemBruta)}) está abaixo de 40% — considere renegociar preços com fornecedores ou reajustar seus preços de venda.`);
-      if (m.margemLiquida < 10) sug.push(`A margem líquida (${m.fmt.pct(m.margemLiquida)}) é baixa — analise onde é possível reduzir despesas operacionais.`);
-      if (m.produtos.length > 1) {
-        const low = m.menorMargem;
-        if (low && low.margem < 20) sug.push(`O produto **${low.produto}** tem a menor margem (${m.fmt.pct(low.margem)}) — avalie se vale a pena mantê-lo ou ajustar seu preço.`);
-      }
-      const top = [...m.despesasPorCategoria].sort((a, b) => b.value - a.value)[0];
-      if (top) sug.push(`Sua maior despesa é **${top.name}** (${brl(top.value)}) — monitore essa categoria de perto.`);
-      if (!sug.length) sug.push("Seus indicadores estão saudáveis! Continue monitorando regularmente.");
-      return `${prefix}, aqui estão algumas sugestões:\n\n${sug.map((s) => `• ${s}`).join("\n")}\n\nUse os atalhos **DRE Simplificada**, **Gráficos de Despesas** e **Análise de Margem** para acompanhar tudo visualmente.`;
-    }
-
-    default: {
-      const lastTx = txs.filter((t) => t.type === "Despesa").slice(-3);
-      return `${prefix}, aqui está um panorama financeiro rápido:\n\n📊 **Faturamento:** ${brl(m.faturamentoTotal)}\n💰 **Lucro Bruto:** ${brl(m.lucroBruto)} (${m.fmt.pct(m.margemBruta)})\n📉 **Despesas Operacionais:** ${brl(m.despesasOperacionais)}\n🏦 **Resultado Líquido:** ${brl(m.resultadoLiquido)} (${m.fmt.pct(m.margemLiquida)})\n${lastTx.length ? `\nÚltimos lançamentos:\n${lastTx.map((t) => `• ${fmtDate(t.date)} — ${t.description}: ${brl(t.amount)}`).join("\n")}` : ""}\n\nPara análises visuais, use os atalhos abaixo:\n• **📋 DRE Simplificada** — tabela completa de resultados\n• **📊 Gráficos de Despesas** — distribuição por categoria\n• **💰 Análise de Margem** — margem bruta por produto`;
-    }
+    default:
+      return "Posso ajudar com uma pergunta específica sobre seus números, como “quanto gastei com marketing?”, “qual foi minha maior despesa?” ou “como melhorar minha margem?”. Também posso mostrar uma DRE, tabela ou gráfico quando você pedir explicitamente.";
   }
 }
