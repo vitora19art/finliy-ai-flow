@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import {
-  Check, Copy, FileText, Menu, Mic, Pencil, Plus, RefreshCw, SendHorizontal,
+  Check, Copy, Menu, Mic, Pencil, Plus, RefreshCw, SendHorizontal,
   Trash2, UserCircle2, X, Paperclip, MessageSquare, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -365,7 +365,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
               )}
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 <button onClick={() => setUploadOpen(true)} disabled={busy} title="Enviar arquivos (Excel, CSV, PDF, comprovantes)" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50">
-                  <FileText className="size-5" /> Enviar arquivos
+                  Enviar arquivos
                 </button>
                 {SUGGESTIONS.map((s) => (
                   <button key={s.label} onClick={() => send(s.command)} disabled={busy} className="shrink-0 rounded-full bg-muted px-4 py-2 text-xs font-semibold ring-1 ring-border hover:bg-accent disabled:opacity-50">
