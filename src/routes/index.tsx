@@ -1,18 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { db, getDB } from "@/lib/store";
+import { rootRoute } from "./__root";
 
-export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "FINLIY — Assistente de inteligência financeira com IA" },
-      { name: "description", content: "Envie planilhas, extratos e comprovantes e converse com a IA do FINLIY para ver DRE, métricas e gráficos da sua empresa." },
-      { property: "og:title", content: "FINLIY — Assistente de inteligência financeira com IA" },
-      { property: "og:description", content: "Envie planilhas, extratos e comprovantes e converse com a IA do FINLIY para ver DRE, métricas e gráficos da sua empresa." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+export const IndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/",
   component: Index,
 });
 

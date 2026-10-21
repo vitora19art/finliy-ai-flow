@@ -8,10 +8,12 @@ import {
 import { toast } from "sonner";
 import {
   type ChartKind, type ChatMessage, type Transaction,
-  brl, fmtDate, fmtSize, isTransactionMessage, isCalculationRequest, transactionFromMessage, todayISO, uid,
+  brl, fmtDate, fmtSize, isTransactionMessage, isCalculationRequest, transactionFromMessage, uid,
 } from "@/lib/finliy";
 import { aiContext, computeMetrics } from "@/lib/metrics";
 import { importTransactionsFromXlsx, sheetToText } from "@/lib/importXlsx";
+import { streamChat } from "@/lib/ai";
+import { extractWithAI } from "@/lib/extract";
 import { db, getDB, useDB } from "@/lib/store";
 import { FinanceTable, withBalance } from "./Tables";
 import { UploadModal } from "./Modals";
@@ -58,34 +60,7 @@ function previousUserText(messages: ChatMessage[], beforeIndex: number) {
   return "";
 }
 
-const readDataUrl = (f: File) =>
-  new Promise<string>((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result as string);
-    r.onerror = rej;
-    r.readAsDataURL(f);
-  });
-
-async function extractWithAI(f: File, text?: string): Promise<{ transactions: Transaction[]; summary: string }> {
-  const body = text
-    ? { fileName: f.name, mime: f.type || "text/csv", text }
-    : { fileName: f.name, mime: f.type || "application/pdf", dataUrl: await readDataUrl(f) };
-  const res = await fetch("/api/extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || "Não foi possível ler o arquivo.");
-  const txs: Transaction[] = (data.transactions ?? [])
-    .filter((t: any) => t && t.amount > 0 && (t.type === "Receita" || t.type === "Despesa"))
-    .map((t: any) => ({
-      id: uid(),
-      date: /^\d{4}-\d{2}-\d{2}$/.test(t.date) ? t.date : todayISO(),
-      description: String(t.description || "Lançamento").slice(0, 120),
-      category: String(t.category || (t.type === "Receita" ? "Receitas Diversas" : "Despesas Diversas")),
-      type: t.type,
-      amount: Number(t.amount),
-      product: t.product || undefined,
-    }));
-  return { transactions: txs, summary: data.summary ?? "" };
-}
+const AI_KEY = (import.meta.env.VITE_LOVABLE_API_KEY as string | undefined) ?? "";
 
 export default function ChatView({ threadId }: { threadId: string }) {
   const navigate = useNavigate();
@@ -136,35 +111,9 @@ export default function ChatView({ threadId }: { threadId: string }) {
     const msgs = history.filter((m) => m.text && m.block !== "file").map((m) => ({ role: m.role, content: m.text.slice(0, 6000) }));
     let acc = "";
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "empresarial", context: context.slice(0, 8000), messages: msgs }),
-        signal: ctrl.signal,
-      });
-      if (!res.ok || !res.body) {
-        patch(id, `⚠️ ${(await res.text().catch(() => "")) || "Não consegui responder agora. Tente novamente."}`);
-        return;
-      }
-      const reader = res.body.getReader();
-      const dec = new TextDecoder();
-      let buf = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const lines = buf.split("\n");
-        buf = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.startsWith("data:")) continue;
-          const data = line.slice(5).trim();
-          if (!data || data === "[DONE]") continue;
-          try {
-            const ev = JSON.parse(data);
-            if (ev.type === "response.output_text.delta") { acc += ev.delta; patch(id, acc); }
-            else if (ev.type === "error" || ev.type === "response.failed") { acc += "\n\n⚠️ A IA encontrou um problema ao responder."; patch(id, acc); }
-          } catch { /* parcial */ }
-        }
+      for await (const ev of streamChat(context.slice(0, 8000), msgs, AI_KEY, ctrl.signal)) {
+        if (ev.type === "delta") { acc += ev.text; patch(id, acc); }
+        else if (ev.type === "error") { patch(id, acc ? `${acc}\n\n⚠️ ${ev.message}` : `⚠️ ${ev.message}`); return; }
       }
       if (!acc) patch(id, "⚠️ Não recebi uma resposta. Tente novamente.");
     } catch (e) {
@@ -231,9 +180,9 @@ export default function ChatView({ threadId }: { threadId: string }) {
         let result: { transactions: Transaction[]; summary: string } = { transactions: [], summary: "" };
         if (ext === "xlsx" || ext === "csv") {
           const direct = await importTransactionsFromXlsx(f);
-          result = direct.length ? { transactions: direct, summary: "Planilha importada pelas colunas identificadas." } : await extractWithAI(f, await sheetToText(f));
+          result = direct.length ? { transactions: direct, summary: "Planilha importada pelas colunas identificadas." } : await extractWithAI(f, await sheetToText(f), AI_KEY);
         } else if (["pdf", "jpg", "jpeg", "png"].includes(ext)) {
-          result = await extractWithAI(f);
+          result = await extractWithAI(f, undefined, AI_KEY);
         } else {
           patch(statusId, `Recebi **${f.name}** (${fmtSize(f.size)}) e ele ficou anexado à conversa. Para a leitura automática, envie o conteúdo em **PDF, Excel (.xlsx), CSV ou imagem** — arquivos ${ext.toUpperCase()} ainda não são lidos automaticamente nesta versão Beta.`);
           continue;
