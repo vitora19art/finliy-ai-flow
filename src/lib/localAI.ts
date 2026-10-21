@@ -8,7 +8,7 @@ type Topic =
   | "cmv" | "compras" | "saldo" | "ticket" | "produto"
   | "comparativo" | "caixa" | "impostos" | "marketing"
   | "folha" | "aluguel" | "categoria" | "crescimento"
-  | "sugestao" | "saudacao" | "agradecimento" | "geral";
+  | "sugestao" | "consultoria" | "saudacao" | "agradecimento" | "geral";
 
 function detectTopic(text: string): Topic {
   const t = norm(text);
@@ -31,6 +31,7 @@ function detectTopic(text: string): Topic {
   if (/aluguel|loja|espaco/.test(t)) return "aluguel";
   if (/categoria|tipo.*despesa|onde.*gastei|gasto.*por/.test(t)) return "categoria";
   if (/crescimento|evolucao|tendencia|aumento|subiu|caiu|variacao/.test(t)) return "crescimento";
+  if (/analise|consultoria|resumo executivo|como melhorar|melhorar a margem/.test(t)) return "consultoria";
   if (/sugest|recomend|conselho|dica|o que.*fazer|melhorar|acao/.test(t)) return "sugestao";
   return "geral";
 }
@@ -60,7 +61,7 @@ export function generateLocalResponse(text: string, m: Metrics, txs: Transaction
       return "De nada! Estou aqui para ajudar sempre que precisar. Que tal ver a **DRE simplificada** ou os **gráficos de despesas**? Use os atalhos abaixo para acessar rapidamente.";
 
     case "dre":
-      return `${prefix}, este é o resumo da sua **DRE Simplificada**:\n\n• **Receita Bruta:** ${brl(m.receitaBruta)}\n• **(-) CMV:** ${brl(m.cmv)}\n• **(=) Lucro Bruto:** ${brl(m.lucroBruto)}\n• **(-) Despesas Operacionais:** ${brl(m.despesasOperacionais)}\n• **(=) Resultado Líquido:** ${brl(m.resultadoLiquido)}\n\nA **margem bruta** é de ${m.fmt.pct(m.margemBruta)} e a **margem líquida** de ${m.fmt.pct(m.margemLiquida)}. Para ver a tabela completa, clique em **DRE Simplificada** nos atalhos.`;
+      return `${prefix}, este é o resumo da sua **DRE Simplificada**:\n\n• **Receita Bruta:** ${brl(m.receitaBruta)}\n• **(-) Deduções:** ${brl(m.deducoes)}\n• **(=) Receita Líquida:** ${brl(m.receitaLiquida)}\n• **(-) Custos / CMV:** ${brl(m.cmv)}\n• **(=) Lucro Bruto:** ${brl(m.lucroBruto)}\n• **(-) Despesas Operacionais:** ${brl(m.despesasOperacionais)}\n• **(=) Resultado Líquido:** ${brl(m.resultadoLiquido)}\n\nA **margem bruta** é de ${m.fmt.pct(m.margemBruta)} e a **margem líquida** de ${m.fmt.pct(m.margemLiquida)}. Para ver a tabela completa, peça **DRE robusta** ou use o atalho de DRE.`;
 
     case "faturamento":
       return `${prefix}, seu **faturamento total** é de **${brl(m.faturamentoTotal)}**, distribuído em **${m.vendasCount} vendas/recebimentos**, com um **ticket médio** de ${brl(m.ticketMedio)}.\n\nQuer ver o faturamento em gráfico? Clique em **Gráficos de Despesas** ou peça "mostre o gráfico de faturamento".`;
@@ -128,6 +129,18 @@ export function generateLocalResponse(text: string, m: Metrics, txs: Transaction
       const change = first ? ((last - first) / first) * 100 : 0;
       const direction = change >= 0 ? "crescimento" : "queda";
       return `${prefix}, comparando o primeiro e o último período com vendas:\n\n• Primeiro período: ${brl(first)}\n• Último período: ${brl(last)}\n• Variação: **${change >= 0 ? "+" : ""}${change.toFixed(1)}%** (${direction})\n\nPara ver a evolução visual, peça "mostre o gráfico de evolução do saldo" ou "gráfico de faturamento".`;
+    }
+
+    case "consultoria": {
+      const topExpense = [...m.despesasPorCategoria].sort((a, b) => b.value - a.value)[0];
+      const cmvRatio = m.receitaLiquida ? (m.cmv / m.receitaLiquida) * 100 : 0;
+      const advice: string[] = [];
+      if (cmvRatio > 35) advice.push(`O CMV representa ${m.fmt.pct(cmvRatio)} da receita líquida. Priorize renegociação com fornecedores, ficha técnica e redução de perdas antes de aumentar volume.`);
+      if (m.margemContribuicao < 50) advice.push(`A margem de contribuição está em ${m.fmt.pct(m.margemContribuicao)}. Uma meta inicial é recuperar pontos por meio de preço, mix de produtos e venda de itens com maior margem.`);
+      if (topExpense) advice.push(`A maior despesa é **${topExpense.name}**, com ${brl(topExpense.value)}. Defina uma meta de redução ou produtividade para essa linha e acompanhe mensalmente.`);
+      if (m.margemLiquida < 10) advice.push(`A margem líquida de ${m.fmt.pct(m.margemLiquida)} exige disciplina sobre despesas fixas. Separe custos essenciais, renegociáveis e discricionários para um plano de 30 dias.`);
+      if (!advice.length) advice.push(`Os indicadores estão equilibrados. Preserve a margem de contribuição em ${m.fmt.pct(m.margemContribuicao)} e monitore o CMV e as despesas por categoria toda semana.`);
+      return `${prefix}, aqui está uma análise executiva baseada nos lançamentos atuais:\n\n${advice.map((item, index) => `${index + 1}. ${item}`).join("\n\n")}\n\n**Leitura-chave:** Receita líquida de ${brl(m.receitaLiquida)}, lucro bruto de ${brl(m.lucroBruto)} e EBITDA de ${brl(m.ebitda)}. O próximo foco deve ser transformar a melhoria de margem em uma meta mensurável por categoria.`;
     }
 
     case "sugestao": {

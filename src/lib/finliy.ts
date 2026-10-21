@@ -22,7 +22,7 @@ export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   text: string;
-  block?: "finance" | "routine" | "blocked" | "file" | "dre" | "metrics" | "chart" | "confirm";
+  block?: "finance" | "routine" | "blocked" | "file" | "dre" | "dre-detalhada" | "metrics" | "chart" | "confirm";
   chart?: ChartKind;
   file?: { name: string; size: number };
   pending?: Transaction;

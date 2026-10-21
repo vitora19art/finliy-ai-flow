@@ -5,7 +5,7 @@ import {
 import { FileImage, FileSpreadsheet, FileText, Sheet } from "lucide-react";
 import { toast } from "sonner";
 import { brl, type ChartKind } from "@/lib/finliy";
-import { dreRows, metricsRows, type Metrics } from "@/lib/metrics";
+import { dreDetailedRows, dreRows, metricsRows, type Metrics } from "@/lib/metrics";
 import { Button } from "@/components/ui/button";
 
 /* ---------------- Exportação ---------------- */
@@ -84,6 +84,27 @@ export function Card({ title, children, footer, innerRef }: { title: string; chi
 }
 
 /* ---------------- DRE ---------------- */
+export function DreDetailedReport({ m }: { m: Metrics }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const rows = dreDetailedRows(m);
+  const data: Rows = [["Demonstrativo", "Valor (R$)"], ...rows.filter((row) => row.kind !== "section").map((row) => [row.label, row.value])];
+  return (
+    <Card title="DRE ROBUSTA / DETALHADA" innerRef={ref} footer={<ExportBar rows={data} name="finliy-dre-detalhada" target={ref} formats={["csv", "xlsx", "png", "pdf"]} />}>
+      <table className="w-full border-collapse text-sm tabular-nums">
+        <thead><tr className="bg-navy text-navy-foreground"><th className="px-3 py-2.5 text-left">Demonstrativo</th><th className="px-3 py-2.5 text-right">Valor (R$)</th></tr></thead>
+        <tbody>{rows.map((row) => row.kind === "section" ? (
+          <tr key={row.label} className="bg-muted"><th colSpan={2} className="px-3 py-2 text-left text-xs font-extrabold uppercase tracking-wide">{row.label}</th></tr>
+        ) : (
+          <tr key={row.label} className={`border-b border-border ${row.kind === "result" ? "bg-navy-soft font-bold" : ""}`}>
+            <td className="px-3 py-2.5">{row.label}</td><td className={`px-3 py-2.5 text-right ${row.value < 0 ? "text-expense" : row.kind === "result" ? "text-balance" : "text-income"}`}>{brl(row.value)}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+      <div className="grid gap-2 pt-3 text-xs text-muted-foreground sm:grid-cols-3"><span>Margem de contribuição: <b>{m.fmt.pct(m.margemContribuicao)}</b></span><span>Margem EBITDA: <b>{m.fmt.pct(m.margemEbitda)}</b></span><span>Margem líquida: <b>{m.fmt.pct(m.margemLiquida)}</b></span></div>
+    </Card>
+  );
+}
+
 export function DreReport({ m }: { m: Metrics }) {
   const ref = useRef<HTMLDivElement>(null);
   const rows = dreRows(m);

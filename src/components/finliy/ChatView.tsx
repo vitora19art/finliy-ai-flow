@@ -17,7 +17,7 @@ import { generateLocalResponse } from "@/lib/localAI";
 import { db, getDB, useDB } from "@/lib/store";
 import { FinanceTable, withBalance } from "./Tables";
 import { UploadModal } from "./Modals";
-import { ChartReport, DreReport, MetricsReport } from "./Reports";
+import { ChartReport, DreDetailedReport, DreReport, MetricsReport } from "./Reports";
 import { ThemeToggle } from "./ThemeToggle";
 import { isExplicitReportRequest } from "@/lib/reportVisibility";
 import { Logo } from "./Logo";
@@ -31,7 +31,7 @@ const SUGGESTIONS = [
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-const REPORT_BLOCKS = new Set(["finance", "dre", "metrics", "chart"]);
+const REPORT_BLOCKS = new Set(["finance", "dre", "dre-detalhada", "metrics", "chart"]);
 
 function detectReport(text: string): Pick<ChatMessage, "block" | "chart" | "text"> | null {
   if (isCalculationRequest(text) || !isExplicitReportRequest(text)) return null;
@@ -45,7 +45,10 @@ function detectReport(text: string): Pick<ChatMessage, "block" | "chart" | "text
     else if (/faturamento|receita|venda/.test(t) && !/compra|versus|\bvs\b|\bx\b/.test(t)) chart = "faturamento";
     return { block: "chart", chart, text: "Aqui está o gráfico solicitado 📊" };
   }
-  if (/\bdre\b|demonstrativo|resultado liquido/.test(t)) return { block: "dre", text: "Aqui está a sua DRE simplificada." };
+  if (/\bdre\b|demonstrativo|resultado liquido/.test(t)) {
+    const detailed = /robusta|detalhada|completa|aprofundada/.test(t);
+    return { block: detailed ? "dre-detalhada" : "dre", text: detailed ? "Aqui está a sua DRE robusta e detalhada." : "Aqui está a sua DRE simplificada." };
+  }
   if (/metrica|indicador|kpi|ticket|cmv|margem|lucro bruto|faturamento total|receita bruta|custo de aquisicao|total de compras/.test(t))
     return { block: "metrics", text: "Aqui estão suas métricas financeiras." };
   if (/tabela|planilha|extrato|lancamentos|fluxo de caixa/.test(t)) return { block: "finance", text: "Perfeito, aqui está a sua tabela" };
@@ -335,6 +338,7 @@ export default function ChatView({ threadId }: { threadId: string }) {
                     ) : <>
                       {m.block === "finance" && <FinancialMessage txs={txs} />}
                       {m.block === "dre" && <DreReport m={metrics} />}
+                      {m.block === "dre-detalhada" && <DreDetailedReport m={metrics} />}
                       {m.block === "metrics" && <MetricsReport m={metrics} />}
                       {m.block === "chart" && m.chart && <ChartReport kind={m.chart} m={metrics} />}
                     </>)}
