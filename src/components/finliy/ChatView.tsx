@@ -23,9 +23,9 @@ import { FinancialMessage } from "./FinancialMessage";
 import { Button } from "@/components/ui/button";
 
 const SUGGESTIONS = [
-  { label: "📊 Gráficos Interativos", command: "Gere um gráfico do faturamento por período" },
-  { label: "📋 Tabela DRE", command: "Mostre a tabela de DRE" },
-  { label: "💰 Métricas", command: "Mostre as métricas financeiras" },
+  { label: "📋 DRE Simplificada", command: "Mostre a DRE simplificada" },
+  { label: "📊 Gráficos de Despesas", command: "Mostre o gráfico de pizza das despesas por categoria" },
+  { label: "💰 Análise de Margem", command: "Mostre o gráfico de margem bruta por produto" },
 ];
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");

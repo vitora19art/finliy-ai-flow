@@ -71,7 +71,7 @@ export const Route = createFileRoute("/api/extract")({
         if (!upstream.ok || !upstream.body) {
           const t = await upstream.text().catch(() => "");
           console.error("extract error", upstream.status, t.slice(0, 400));
-          const msg = upstream.status === 402 ? "Os créditos de IA acabaram." : upstream.status === 429 ? "Muitas solicitações. Tente em instantes." : "Não foi possível ler este arquivo.";
+          const msg = upstream.status === 429 ? "Muitas solicitações. Tente em instantes." : "Não foi possível ler este arquivo agora. Tente novamente.";
           return Response.json({ error: msg }, { status: upstream.status });
         }
         const reader = upstream.body.getReader();

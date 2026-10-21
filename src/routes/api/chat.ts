@@ -51,9 +51,8 @@ export const Route = createFileRoute("/api/chat")({
           });
           if (!upstream.ok) {
             const txt = await upstream.text().catch(() => "");
-            let msg = "A IA não conseguiu responder agora.";
+            let msg = "A IA não conseguiu responder agora. Tente novamente em instantes.";
             if (upstream.status === 429) msg = "Muitas solicitações em sequência. Aguarde alguns segundos e tente de novo.";
-            if (upstream.status === 402) msg = "Os créditos de IA acabaram. Adicione créditos para continuar conversando.";
             console.error("AI gateway error", upstream.status, txt.slice(0, 300));
             return new Response(msg, { status: upstream.status });
           }
