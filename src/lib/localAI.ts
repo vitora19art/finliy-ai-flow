@@ -14,7 +14,7 @@ function detectTopic(text: string): Topic {
   if (/(ola|oi|bom dia|boa tarde|boa noite|hey)\b/.test(t)) return "saudacao";
   if (/(obrigad|valeu|agradec|perfeito|otimo|excelente)/.test(t)) return "agradecimento";
   if (/\b(dre)\b|demonstrativo.*resultado|resultado.*liquido/.test(t)) return "dre";
-  if (/(dica|conselho|feedback|diagnost|como melhorar|como economizar|reduz|economiz|estrateg|precific|onde.*gast|melhorar.*margem|o que.*fazer|recomend)/.test(t)) return "consultoria";
+  if (/(dica|conselho|feedback|diagnost|como melhorar|como economizar|reduz|economiz|estrateg|precific|onde.*gast|gastando.*muito|gasto.*alto|melhorar.*margem|o que.*fazer|o que.*acha|opiniao|reflex|meu mes|organiza.*fluxo|planej|controlar.*caixa|recomend)/.test(t)) return "consultoria";
   if (/(quanto.*(gastei|gasto|despesa|paguei)|maior despesa|qual.*maior.*gasto|onde.*estou.*gastando)/.test(t)) return "numero";
   if (/faturamento|receita.*total|receita.*bruta|venda.*total/.test(t)) return "faturamento";
   if (/margem.*lucro|lucro.*liquido|lucro.*bruto|rentabilidade/.test(t)) return "lucro";
@@ -49,6 +49,12 @@ function matchingExpense(text: string, m: Metrics): { name: string; value: numbe
   return m.despesasPorCategoria.find((expense) => words.some((word) => norm(expense.name).includes(word)));
 }
 
+function generalAssessment(m: Metrics): string {
+  if (m.resultadoLiquido < 0) return `O período fechou com resultado negativo de **${brl(m.resultadoLiquido)}**. O ponto mais importante agora é proteger o caixa: compare o CMV e a maior despesa antes de assumir novos compromissos.`;
+  if (m.margemLiquida < 10) return `O negócio está gerando resultado positivo de **${brl(m.resultadoLiquido)}**, mas a margem líquida de ${m.fmt.pct(m.margemLiquida)} ainda é apertada. Pequenas melhorias no CMV e na maior categoria de despesa podem mudar bastante o resultado.`;
+  return `O período apresenta resultado líquido de **${brl(m.resultadoLiquido)}** e margem líquida de ${m.fmt.pct(m.margemLiquida)}. A base parece saudável; o próximo ganho tende a vir do controle de ${m.cmv >= m.despesasOperacionais ? "compras e insumos" : "despesas operacionais"}.`;
+}
+
 function consultancy(m: Metrics): string {
   const top = [...m.despesasPorCategoria].sort((a, b) => b.value - a.value)[0];
   const cmvRatio = m.receitaLiquida ? (m.cmv / m.receitaLiquida) * 100 : 0;
@@ -81,7 +87,7 @@ export function generateLocalResponse(text: string, m: Metrics, txs: Transaction
     case "dre":
       return `${context}, a DRE simplificada apresenta Receita Bruta de **${brl(m.receitaBruta)}**, Deduções de **${brl(m.deducoes)}**, Receita Líquida de **${brl(m.receitaLiquida)}**, CMV de **${brl(m.cmv)}**, Lucro Bruto de **${brl(m.lucroBruto)}**, Despesas Operacionais de **${brl(m.despesasOperacionais)}** e Resultado Líquido de **${brl(m.resultadoLiquido)}**.`;
     case "faturamento":
-      return `${context}, o faturamento é **${brl(m.faturamentoTotal)}**, em ${m.vendasCount} vendas, com ticket médio de **${brl(m.ticketMedio)}**. Se quiser, peça explicitamente para ver o gráfico de faturamento.`;
+      return `${context}, o faturamento é **${brl(m.faturamentoTotal)}**, em ${m.vendasCount} vendas, com ticket médio de **${brl(m.ticketMedio)}**.`;
     case "lucro":
       return `${context}, o Lucro Bruto é **${brl(m.lucroBruto)}**, com margem de ${m.fmt.pct(m.margemBruta)}, e o Resultado Líquido é **${brl(m.resultadoLiquido)}**, com margem de ${m.fmt.pct(m.margemLiquida)}.`;
     case "margem":
@@ -99,7 +105,7 @@ export function generateLocalResponse(text: string, m: Metrics, txs: Transaction
       return `${context}, as despesas operacionais somam **${brl(m.despesasOperacionais)}**. As maiores categorias são: ${topExpenseCategories(m)}.`;
     case "saldo": {
       const last = m.saldo[m.saldo.length - 1];
-      return `${context}, o saldo acumulado mais recente é **${brl(last?.Saldo ?? 0)}**. Para visualizar a evolução, peça explicitamente o gráfico de saldo.`;
+      return `${context}, o saldo acumulado mais recente é **${brl(last?.Saldo ?? 0)}**.`;
     }
     case "ticket":
       return `${context}, o ticket médio é **${brl(m.ticketMedio)}**. Combos e ofertas de itens com maior margem podem elevar esse valor sem depender apenas de mais vendas.`;
@@ -132,6 +138,6 @@ export function generateLocalResponse(text: string, m: Metrics, txs: Transaction
       return `Entre o primeiro e o último período com vendas, o faturamento variou **${change >= 0 ? "+" : ""}${change.toFixed(1)}%**: de ${brl(first)} para ${brl(last)}.`;
     }
     default:
-      return "Posso ajudar com uma pergunta específica sobre seus números, como “quanto gastei com marketing?”, “qual foi minha maior despesa?” ou “como melhorar minha margem?”. Também posso mostrar uma DRE, tabela ou gráfico quando você pedir explicitamente.";
+      return generalAssessment(m);
   }
 }

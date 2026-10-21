@@ -36,22 +36,22 @@ const REPORT_BLOCKS = new Set(["finance", "dre", "dre-detalhada", "metrics", "ch
 function detectReport(text: string): Pick<ChatMessage, "block" | "chart" | "text"> | null {
   if (isCalculationRequest(text) || !isExplicitReportRequest(text)) return null;
   const t = norm(text);
-  if (/grafico|chart|pizza|linha|barras/.test(t)) {
+  if (/grafico|chart|pizza|linha|barras|plot\w*|desenh\w*/.test(t)) {
     let chart: ChartKind = "comparativo";
     if (/pizza|categoria/.test(t) || (/despesa/.test(t) && !/faturamento/.test(t))) chart = "despesas-pizza";
     else if (/saldo|evolu|linha/.test(t)) chart = "saldo-linha";
     else if (/margem|produto/.test(t)) chart = "margem-produto";
     else if (/compra|custo/.test(t) && !/faturamento|receita|venda/.test(t)) chart = "compras";
     else if (/faturamento|receita|venda/.test(t) && !/compra|versus|\bvs\b|\bx\b/.test(t)) chart = "faturamento";
-    return { block: "chart", chart, text: "Aqui está o gráfico solicitado 📊" };
+    return { block: "chart", chart, text: "Aqui está a visão gráfica dos seus dados." }; 
   }
   if (/\bdre\b|demonstrativo|resultado liquido/.test(t)) {
     const detailed = /robusta|detalhada|completa|aprofundada/.test(t);
-    return { block: detailed ? "dre-detalhada" : "dre", text: detailed ? "Aqui está a sua DRE robusta e detalhada." : "Aqui está a sua DRE simplificada." };
+    return { block: detailed ? "dre-detalhada" : "dre", text: detailed ? "Aqui está a visão detalhada da sua DRE." : "Aqui está a visão simplificada da sua DRE." }; 
   }
   if (/metrica|indicador|kpi|ticket|cmv|margem|lucro bruto|faturamento total|receita bruta|custo de aquisicao|total de compras/.test(t))
-    return { block: "metrics", text: "Aqui estão suas métricas financeiras." };
-  if (/tabela|planilha|extrato|lancamentos|fluxo de caixa/.test(t)) return { block: "finance", text: "Perfeito, aqui está a sua tabela" };
+    return { block: "metrics", text: "Aqui está a leitura das suas métricas financeiras." }; 
+  if (/tabela|planilha|extrato|lancamentos|fluxo de caixa/.test(t)) return { block: "finance", text: "Aqui está a visão detalhada dos seus lançamentos." };
   return null;
 }
 
