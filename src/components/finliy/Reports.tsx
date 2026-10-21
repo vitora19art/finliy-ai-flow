@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from "react";
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { FileImage, FileSpreadsheet, FileText, Sheet } from "lucide-react";
+import { FileImage, FileSpreadsheet, Sheet } from "lucide-react";
 import { toast } from "sonner";
 import { brl, type ChartKind } from "@/lib/finliy";
 import { dreDetailedRows, dreRows, metricsRows, type Metrics } from "@/lib/metrics";
@@ -66,7 +66,7 @@ export function ExportBar({
       {formats.includes("csv") && rows && <Button size="sm" className={btn} onClick={() => exportCSV(rows, name)}><Sheet className="size-3.5" />CSV</Button>}
       {formats.includes("xlsx") && rows && <Button size="sm" className={btn} onClick={() => exportXLSX(rows, name)}><FileSpreadsheet className="size-3.5" />Excel (.xlsx)</Button>}
       {formats.includes("png") && <Button size="sm" className={btn} onClick={() => exportPNG(target?.current ?? null, name)}><FileImage className="size-3.5" />PNG</Button>}
-      {formats.includes("pdf") && <Button size="sm" className={btn} onClick={() => exportPDF(target?.current ?? null, name)}><FileText className="size-3.5" />PDF</Button>}
+      {formats.includes("pdf") && <Button size="sm" className={btn} onClick={() => exportPDF(target?.current ?? null, name)}>PDF</Button>}
     </div>
   );
 }
